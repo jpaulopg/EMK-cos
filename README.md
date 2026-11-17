@@ -57,13 +57,13 @@ python ../experiments/exp_vae.py          # or rerun the experiment (overwrites 
 | --- | --- | --- | --- |
 | Table "Exactness against Monte Carlo" | `checks.py` (prints) | — | — |
 | Quadrature accuracy and Table "Time per input" | `quad_check.py` | (prints) | `res_quad_check.json` |
-| Figure "Error against Monte Carlo as uncertainty grows" | `exp_snr.py` | (prints) | `res_snr.json` |
-| Synthetic GMM: estimated laws, t mixtures, MNAR, multimodal laws (Table with norms 6 and 6/ρ) | `exp_synth.py s1,s3,s6` and `exp_synth.py s2,s4,s5` | `sum_synth.py` | `res_synth_*.jsonl` |
-| VAE posteriors (Table "VAE posteriors") | `exp_vae.py` | `sum_vae.py` | `res_vae.jsonl` |
-| Decision thresholds (FAR, AUC) | `exp_thr.py 0 1 2` | `sum_thr.py` | `res_thr_*.jsonl` |
-| Downstream tasks on VAE posteriors (Discussion) | `exp_vae_task.py 0.6` and `exp_vae_task.py 1.2` | (prints) | `res_vae_task_*.jsonl` |
-| Bayesian posteriors: GP curves and regression weights | `exp_rv.py gp SEED`, `exp_rv.py blr SEED` (seeds 0–2) | `sum_rv.py` | `res_rv_*.jsonl` |
-| Prior variance and dependence between inputs (Table "Regression weights, 15 rows") | `exp_prior.py 10` and `exp_prior.py 10 iid` | `sum_prior.py` | `res_prior*.jsonl` |
+| Figure "Error against Monte Carlo as uncertainty grows" (Appendix D) | `exp_snr.py` | (prints) | `res_snr.json` |
+| Synthetic GMM, multimodal laws (Table with norms 6 and 6/ρ; s6). s1–s5 (estimated laws, t mixtures, MNAR) are auxiliary and not in the paper | `exp_synth.py s1,s3,s6` and `exp_synth.py s2,s4,s5` | `sum_synth.py` | `res_synth_*.jsonl` |
+| VAE posteriors (Table "Fidelity to the expected cosine under the posterior laws") | `exp_vae.py` | `sum_vae.py` | `res_vae.jsonl` |
+| Decision thresholds (FAR, AUC) — auxiliary, not in the paper | `exp_thr.py 0 1 2` | `sum_thr.py` | `res_thr_*.jsonl` |
+| Downstream tasks on VAE posteriors — auxiliary, not in the paper | `exp_vae_task.py 0.6` and `exp_vae_task.py 1.2` | (prints) | `res_vae_task_*.jsonl` |
+| Bayesian posteriors: GP curves and regression weights (fidelity table; true-vector comparison in Appendix D) | `exp_rv.py gp SEED`, `exp_rv.py blr SEED` (seeds 0–2) | `sum_rv.py` | `res_rv_*.jsonl` |
+| Prior variance and dependence between inputs (Table "Regression weights, 15 rows", Appendix D) | `exp_prior.py 10` and `exp_prior.py 10 iid` | `sum_prior.py` | `res_prior*.jsonl` |
 | Incomplete data, density-model selection | `exp_auto.py NAME N 3 0.3,0.5,0.7` | `sum_auto.py` | `res_auto_*.jsonl` |
 | Incomplete data, comparison of estimators (Table "Incomplete data") | `exp_cmp.py NAME N` (needs `res_auto_NAME.jsonl`) | `sum_cmp.py` | `res_cmp_*.jsonl` |
 | Covariance structure, BIC vs validation (paragraph "Choice of the density model") | `exp_struct.py`, `exp_select2.py` (`NAME N C 4 0.3,0.5,0.7`) | `sum_select2.py` | `res_struct_*`, `res_select2_*` |
@@ -74,7 +74,7 @@ python ../experiments/exp_vae.py          # or rerun the experiment (overwrites 
 | Uncertainty of the cosine: DSS, variance ratio, SD error (Table "Mean and variance forecasts") | `exp_unc.py SEED` (seeds 0–2) | `make_tables.py` | `res_unc_*.jsonl` |
 | Observed-subset cosine with nearest-correlation PSD correction (column "Observed+PSD") | `exp_yu.py NAME N` | `make_tables.py` | `res_yu_*.jsonl` |
 | Stratification by responsibility entropy (paragraph "Why the moment-based estimators tie here") | `exp_strat.py NAMES` | (prints) | `res_strat_*.jsonl` |
-| Kernel ridge regression with the observed-subset cosine (R² = −144, Discussion) | `exp_diag.py reg NAME N C 5 0.3,0.5,0.7` | `sum_diag.py` | `res_diag_reg_*.jsonl` |
+| Kernel ridge regression with the observed-subset cosine (R² = −144) — auxiliary, not in the paper | `exp_diag.py reg NAME N C 5 0.3,0.5,0.7` | `sum_diag.py` | `res_diag_reg_*.jsonl` |
 
 Data-set names, sizes `N` and numbers of mixture components `C` used for the incomplete-data experiments:
 
