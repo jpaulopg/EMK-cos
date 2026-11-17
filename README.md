@@ -28,7 +28,7 @@ The core library is `experiments/emk_cos.py`:
 | `nu_taylor2(m, S)` | Second-order Taylor (delta-method) baseline |
 | `em_gmm_missing`, `conditional_mixture` | GMM fitted by EM with missing values and the conditional law of a record |
 
-Baselines from the literature are in `baselines.py`: the PN-Taylor approximation of Herrera-Esposito & Burge (2025) (`nu_pn2025`), the ratio of means and moment-ratio variance of Baumann et al. (2024) (`ratio_mean`, `ratio_var`) and the nearest correlation matrix used for the PSD correction (`nearest_correlation`). `make_tables.py` prints the LaTeX rows of every table from the stored results and writes `results/tables.json`.
+Baselines from the literature are in `baselines.py`: the PN-Taylor approximation of Herrera-Esposito & Burge (2025) (`nu_pn2025`), the ratio of means and moment-ratio variance of Baumann et al. (2024) (`ratio_mean`, `ratio_var`), the per-component ratio of means used as a control (`ratio_comp`) and the nearest correlation matrix used for the PSD correction (`nearest_correlation`). `make_tables.py` prints the LaTeX rows of every table from the stored results and writes `results/tables.json`.
 
 Other helpers: `em_struct.py` (EM with full, diagonal or low-rank covariance), `exp_knn.py` (k-NN imputation and k-NN mixtures),
 `exp_real2.py` (data loaders and evaluation helpers), `vae_np.py` (NumPy variational autoencoder).
@@ -70,8 +70,9 @@ python ../experiments/exp_vae.py          # or rerun the experiment (overwrites 
 | Missingness mechanisms and inductive protocol (Table "Missingness mechanisms") | `exp_mech.py NAME ...` | `sum_mech.py` | `res_mech_*.jsonl` |
 | Error decomposition (Table "Decomposition of the error") | `exp_aux.py NAME` | `sum_aux.py` | `res_aux_*.jsonl` |
 | Positive semidefiniteness (Table "Kernel matrices ...") | `exp_psd.py SEED` (seeds 0–2) | `sum_psd.py` (also reads `res_cmp_*`) | `res_psd_*.jsonl` |
-| Regime map: excess risk over dimension, SNR and multimodality (Table "Excess squared-error risk") | `exp_regime.py 0` | `make_tables.py` | `res_regime.json` |
-| Uncertainty of the cosine: DSS, variance ratio, SD error (Table "Mean and variance forecasts") | `exp_unc.py SEED` (seeds 0–2) | `make_tables.py` | `res_unc_*.jsonl` |
+| Regime map: excess risk for diagonal Gaussians, 2-D laws embedded in D dimensions and mixtures with three spreads, including the per-component ratio of means (Table "Excess squared-error risk") | `exp_regime.py 0` | `make_tables.py` | `res_regime.json` |
+| Uncertainty of the cosine: DSS, scale ratio of variances, SD error (Table "Mean and variance forecasts") | `exp_unc.py SEED` (seeds 0–2) | `make_tables.py` | `res_unc_*.jsonl` |
+| Cost of mean and variance per input and per pair (Table "Mean and variance of the cosine") | `exp_cost2.py` | (prints) | `res_cost2.json` |
 | Observed-subset cosine with nearest-correlation PSD correction (column "Observed+PSD") | `exp_yu.py NAME N` | `make_tables.py` | `res_yu_*.jsonl` |
 | Stratification by responsibility entropy (paragraph "Why the moment-based estimators tie here") | `exp_strat.py NAMES` | (prints) | `res_strat_*.jsonl` |
 | Kernel ridge regression with the observed-subset cosine (R² = −144) — auxiliary, not in the paper | `exp_diag.py reg NAME N C 5 0.3,0.5,0.7` | `sum_diag.py` | `res_diag_reg_*.jsonl` |

@@ -23,14 +23,17 @@ def run(name, rep, rate=0.5):
     Nu = np.array([E.nu_mixture(r, m, S) for r, m, S in cond])
     Mean = np.array([(r[:, None] * m).sum(0) for r, m, S in cond])
     Tr = np.array([sum(r[c] * (m[c] @ m[c] + np.trace(S[c])) for c in range(len(r))) for r, m, S in cond])
-    K = {"EMK-cos": Nu @ Nu.T, "RatioMeans": B.ratio_mean(Mean, Tr), "Plug-in": cosm(Mean)}
+    Nr = np.array([B.ratio_comp(r, m, S) for r, m, S in cond])
+    K = {"EMK-cos": Nu @ Nu.T, "RatioMeans": B.ratio_mean(Mean, Tr), "RatioComp": Nr @ Nr.T, "Plug-in": cosm(Mean)}
     Kt = cosm(X); iu = np.triu_indices(n, 1); amb = np.maximum(H[:, None], H[None, :])[iu]
     out = {}
     for g in range(len(EDGES) - 1):
         sel = (amb >= EDGES[g]) & (amb < EDGES[g + 1])
         out[f"g{g}"] = dict(pairs=int(sel.sum()),
                             sse={k: float(((v[iu] - Kt[iu])[sel] ** 2).sum()) for k, v in K.items()},
-                            gap2=float(((K["EMK-cos"] - K["RatioMeans"])[iu][sel] ** 2).sum()))
+                            gap2=float(((K["EMK-cos"] - K["RatioMeans"])[iu][sel] ** 2).sum()),
+                            gap2c=float(((K["EMK-cos"] - K["RatioComp"])[iu][sel] ** 2).sum()),
+                            wins={k: int((((v[iu] - Kt[iu])[sel]) ** 2 > ((K["EMK-cos"][iu] - Kt[iu])[sel]) ** 2).sum()) for k, v in K.items()})
     out["_H"] = dict(mean=float(H.mean()), frac_amb=float((H >= 0.5).mean()))
     return out
 

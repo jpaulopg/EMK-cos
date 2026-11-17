@@ -60,7 +60,7 @@ def m2_gauss(m, S):
     logL = -0.5 * np.log(den).sum(1) - T * (mt ** 2 / den).sum(1)
     w = WY * EY / sc * np.exp(logL)
     a = mt[None, :] / den
-    M = np.einsum("k,ki,kj->ij", w, a, a)
+    M = (a * w[:, None]).T @ a                      # BLAS: sum_k w_k a_k a_k^T
     M[np.diag_indices(D)] += (w[:, None] * lam[None, :] / den).sum(0)
     return Q @ M @ Q.T
 

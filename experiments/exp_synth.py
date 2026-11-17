@@ -53,7 +53,8 @@ def estimators(Xm, pi, mus, covs):
                    for r, m, S in cond])
     Mean = np.array([(r[:, None] * m).sum(0) for r, m, S in cond])
     Tr = np.array([sum(r[c] * (m[c] @ m[c] + np.trace(S[c])) for c in range(C)) for r, m, S in cond])
-    K = {"EMK-cos": Nu @ Nu.T, "Taylor2": Nt @ Nt.T, "PN-Taylor": Np @ Np.T, "CMI": cosm(Mean),
+    Nr = np.array([B.ratio_comp(r, m, S) for r, m, S in cond])
+    K = {"EMK-cos": Nu @ Nu.T, "Taylor2": Nt @ Nt.T, "PN-Taylor": Np @ Np.T, "CMI": cosm(Mean), "RatioComp": Nr @ Nr.T,
          "RatioMeans": (Mean @ Mean.T) / np.sqrt(np.outer(Tr, Tr))}
     return K
 

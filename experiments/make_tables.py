@@ -14,32 +14,41 @@ S = json.load(open("res_snr.json")); lv = ["4.0", "2.0", "1.0", "0.5", "0.25", "
 for m, k in (("EMK", "EMK-cos"), ("PLUG", "Plug-in (CMI)"), ("PN", "PN-Taylor"), ("RATIO", "RatioMeans")):
     out["snr_" + m] = "".join(f"({i+1},{np.mean(S[l][k]):.3g})" for i, l in enumerate(lv))
 
-# regime map
+# regime map: worst case (max over SNR, rho and spread) of the excess risk relative to the Bayes risk, in %
 R = json.load(open("res_regime.json")); rows = []
+pc = lambda x, k: 100 * x[k]["rel_excess"] if k in x else None
+fmt = lambda v, d=2: "--" if v is None else f"{v:.{d}f}"
 for D in (2, 5, 10, 30, 100, 300, 1000):
-    g = {(r["law"], r["par"]): r["res"] for r in R if r["D"] == D}
-    cells = []
-    for snr in (0.5, 1.0, 2.0):
-        x = g[("gauss", snr)]
-        cells += [f"{100*x['RatioMeans']['rel_excess']:.2f}", f"{100*x['PN-Taylor']['rel_excess']:.2f}" if "PN-Taylor" in x else "--"]
-    for rho in (3.0, 10.0):
-        cells.append(f"{100*g[('mixture', rho)]['RatioMeans']['rel_excess']:.1f}")
+    rr = [r for r in R if r["D"] == D]
+    gs = [r["res"] for r in rr if r["law"] == "gauss"]
+    es = [r["res"] for r in rr if r["law"] == "embed2"]
+    ms = [r["res"] for r in rr if r["law"] == "mixture" and r["par"] > 1]
+    mx = lambda L, k: (max(v for v in (pc(x, k) for x in L) if v is not None) if L and any(k in x for x in L) else None)
+    cells = [fmt(mx(gs, "RatioMeans")), fmt(mx(gs, "PN-Taylor")), fmt(mx(es, "RatioMeans")), fmt(mx(es, "PN-Taylor")),
+             fmt(mx(ms, "RatioMeans"), 1), fmt(mx(ms, "RatioComp")), fmt(mx(ms, "PN-Taylor"))]
     rows.append(f"{D} & " + " & ".join(cells) + r" \\")
 out["regime"] = "\n".join(rows)
+# mixture detail by spread (max over D and rho)
+out["regime_spread"] = {sp: {k: round(max(100 * r["res"][k]["rel_excess"] for r in R if r["law"] == "mixture" and r.get("spread") == sp and r["par"] > 1 and k in r["res"]), 3)
+                             for k in ("RatioMeans", "RatioComp", "PN-Taylor", "Plug-in")} for sp in (0.1, 0.5, 1.0)}
+out["regime_gauss_min_max"] = {k: [round(min(100*r["res"][k]["rel_excess"] for r in R if r["law"]=="gauss" and k in r["res"]),3), round(max(100*r["res"][k]["rel_excess"] for r in R if r["law"]=="gauss" and k in r["res"]),3)] for k in ("Plug-in",)}
 
 # multimodal (S6) with MC reference
-L = [json.loads(l) for l in open("res_synth_s5_s6.jsonl")]
+L = [json.loads(l) for l in open("res_synth_s6.jsonl")]
 G = collections.defaultdict(list)
 for l in L: G[(l["exp"], l.get("rho"), l.get("rate"), l.get("kind"))].append(l["res"])
 rows = []
 for rho in (1, 3, 10):
     for rate in (0.7, 0.85):
         v = G[("S6", rho, rate, None)]; a = lambda k: np.mean([x[k] for x in v])
-        ref = b([a("ref_RatioMeans"), a("ref_PN-Taylor"), a("ref_CMI")], "{:.3f}")
-        real = b([a("EMK-cos"), a("RatioMeans"), a("PN-Taylor")], "{:.3f}")
+        ref = b([a("ref_RatioMeans"), a("ref_RatioComp"), a("ref_PN-Taylor"), a("ref_CMI")], "{:.3f}")
+        real = b([a("EMK-cos"), a("RatioMeans"), a("RatioComp"), a("PN-Taylor")], "{:.3f}")
         rows.append(f"{rho} & {int(rate*100)}\\% & {a('ref_EMK-cos'):.4f} & " + " & ".join(ref) + " & " + " & ".join(real) + r" \\")
 out["s6"] = "\n".join(rows)
-out["s5"] = {k: {m: round(np.mean([x[m] for x in v]), 4) for m in ("EMK-cos", "RatioMeans", "PN-Taylor", "CMI")} for (e, _, _, k), v in G.items() if e == "S5"}
+# s5 kept from the earlier run
+G5 = collections.defaultdict(list)
+for l in (json.loads(l) for l in open("res_synth_s5_s6.jsonl")): G5[(l["exp"], l.get("kind"))].append(l["res"])
+out["s5"] = {k: {m: round(np.mean([x[m] for x in v]), 4) for m in ("EMK-cos", "RatioMeans", "PN-Taylor", "CMI")} for (e, k), v in G5.items() if e == "S5"}
 
 # VAE
 V = [json.loads(l)["res"] for l in open("res_vae.jsonl")]; rows = []
@@ -92,6 +101,7 @@ for app, cases in (("vae", [("tau0.25", "VAE, $\\tau=0.25$"), ("tau1.0", "VAE, $
         dss = b([g(m, "dss") for m in MU], "{:.3f}")
         vr = [f"{g(m, 'var_ratio'):.2f}" for m in MU]
         sd = b([g(m, "rmse_sd_ref") for m in MU], "{:.4f}")
+        vr = [f"{g(m, 'scale_ratio'):.2f}" for m in MU]
         rows.append(f"{lab} & {np.mean([u[app][k]['_mean_sd_ref'] for u in U]):.2f} & " + " & ".join(dss) + " & " + " & ".join(vr) + " & " + " & ".join(sd) + r" \\")
 out["unc"] = "\n".join(rows)
 

@@ -59,3 +59,17 @@ def nearest_correlation(A, iters=500, tol=1e-9):
             Y = Yn; break
         Y = Yn
     return Y
+
+
+def ratio_comp(r, ms, Ss):
+    """Per-component ratio of means: sum_c r_c m_c / sqrt(||m_c||^2 + tr S_c).
+    Normalizes each Gaussian component before mixing; feature norm <= 1, so the Gram construction is PSD."""
+    out = 0.0
+    for rc, m, S in zip(r, ms, Ss):
+        if rc <= 0:
+            continue
+        tr = np.trace(S) if np.ndim(S) == 2 else np.sum(S)
+        e2 = float(m @ m + tr)
+        if e2 > 0:
+            out = out + rc * m / np.sqrt(e2)
+    return out
