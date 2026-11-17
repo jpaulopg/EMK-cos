@@ -1,3 +1,4 @@
+"""Multimodal conditional laws (Appendix, Table with norms 6 and 6/rho): exp_synth.py s6"""
 import sys, json, time
 import numpy as np
 import emk_cos as E
@@ -21,7 +22,7 @@ def gen_params(D, C, rng, norms, k=3):
     return pi, mus, np.array(covs)
 
 
-def sample(pi, mus, covs, n, rng, df=None):
+def sample(pi, mus, covs, n, rng):
     C, D = mus.shape
     comp = rng.choice(C, n, p=pi)
     X = np.empty((n, D))
@@ -30,9 +31,6 @@ def sample(pi, mus, covs, n, rng, df=None):
         if len(idx):
             L = np.linalg.cholesky(covs[c])
             Z = rng.standard_normal((len(idx), D))
-            if df is not None:   # multivariate t with same scale matrix
-                g = rng.chisquare(df, len(idx)) / df
-                Z = Z / np.sqrt(g)[:, None]
             X[idx] = mus[c] + Z @ L.T
     return X
 
@@ -71,87 +69,9 @@ def mcar(n, D, rate, rng):
     return rng.random((n, D)) < rate
 
 
-def mnar(X, rate, rng):
-    # missing probability grows with |x|; calibrated to the target mean rate
-    A = np.abs(X); A = (A - A.mean()) / A.std()
-    lo, hi = -10, 10
-    for _ in range(40):
-        b = (lo + hi) / 2
-        p = 1 / (1 + np.exp(-(1.5 * A + b)))
-        if p.mean() > rate: hi = b
-        else: lo = b
-    return rng.random(X.shape) < p
-
-
 def emit(f, **kw):
     f.write(json.dumps(kw) + "\n"); f.flush()
     print(kw.get("exp"), {k: v for k, v in kw.items() if k not in ("res", "exp")}, flush=True)
-
-
-def s1(f, reps=10, D=8, C=3, rate=0.5, ntest=200):
-    for rep in range(reps):
-        rng = np.random.default_rng(10 + rep)
-        par = gen_params(D, C, rng, [3.0] * C)
-        Xt = sample(*par, ntest, rng); Mt = mcar(ntest, D, rate, rng)
-        Xm = np.where(Mt, np.nan, Xt)
-        Ko = estimators(Xm, *par); Kref = Ko["EMK-cos"]
-        emit(f, exp="S1", model="oracle", ntrain=0, rep=rep, res=score(Ko, Xt, Kref))
-        for ntr in [100, 300, 1000]:
-            Xtr = sample(*par, ntr, rng); Mtr = mcar(ntr, D, rate, rng)
-            fit = E.em_gmm_missing(np.where(Mtr, np.nan, Xtr), C=C, iters=25, reg=1e-3, seed=rep)
-            emit(f, exp="S1", model="fitted", ntrain=ntr, rep=rep, res=score(estimators(Xm, *fit), Xt, Kref))
-
-
-def s2(f, reps=10, D=10, C=3, ntest=200):
-    for a in [0.5, 1.0, 2.0, 4.0]:
-        for rate in [0.3, 0.6]:
-            for rep in range(reps):
-                rng = np.random.default_rng(100 + rep)
-                par = gen_params(D, C, rng, [a] * C)
-                Xt = sample(*par, ntest, rng); Mt = mcar(ntest, D, rate, rng)
-                Ko = estimators(np.where(Mt, np.nan, Xt), *par)
-                emit(f, exp="S2", a=a, rate=rate, rep=rep, res=score(Ko, Xt, Ko["EMK-cos"]))
-
-
-def s3(f, reps=10, D=10, C=2, rate=0.5, ntest=200):
-    for rho in [1, 3, 10]:
-        for rep in range(reps):
-            rng = np.random.default_rng(200 + rep)
-            par = gen_params(D, C, rng, [6.0, 6.0 / rho])
-            Xt = sample(*par, ntest, rng); Mt = mcar(ntest, D, rate, rng)
-            Xm = np.where(Mt, np.nan, Xt)
-            Ko = estimators(Xm, *par); Kref = Ko["EMK-cos"]
-            emit(f, exp="S3", rho=rho, model="oracle", rep=rep, res=score(Ko, Xt, Kref))
-            Xtr = sample(*par, 500, rng); Mtr = mcar(500, D, rate, rng)
-            fit = E.em_gmm_missing(np.where(Mtr, np.nan, Xtr), C=C, iters=25, reg=1e-3, seed=rep)
-            emit(f, exp="S3", rho=rho, model="fitted", rep=rep, res=score(estimators(Xm, *fit), Xt, Kref))
-
-
-def s4(f, reps=3, C=3, rate=0.5, ntest=150):
-    for D in [10, 30, 60]:
-        for rep in range(reps):
-            rng = np.random.default_rng(300 + rep)
-            par = gen_params(D, C, rng, [2.0 * np.sqrt(D / 10)] * C)
-            Xt = sample(*par, ntest, rng); Mt = mcar(ntest, D, rate, rng)
-            t = time.time()
-            r = score(estimators(np.where(Mt, np.nan, Xt), *par), Xt)
-            emit(f, exp="S4", D=D, rep=rep, sec=round(time.time() - t, 1), res=r)
-
-
-def s5(f, reps=4, D=8, C=3, rate=0.5, ntest=200, ntr=600):
-    for kind in ["gauss", "t5", "t3", "mnar"]:
-        for rep in range(reps):
-            rng = np.random.default_rng(400 + rep)
-            par = gen_params(D, C, rng, [2.0] * C)
-            df = {"gauss": None, "t5": 5, "t3": 3, "mnar": None}[kind]
-            Xt = sample(*par, ntest, rng, df); Xtr = sample(*par, ntr, rng, df)
-            if kind == "mnar":
-                Mt = mnar(Xt, rate, rng); Mtr = mnar(Xtr, rate, rng)
-            else:
-                Mt = mcar(ntest, D, rate, rng); Mtr = mcar(ntr, D, rate, rng)
-            fit = E.em_gmm_missing(np.where(Mtr, np.nan, Xtr), C=C, iters=25, reg=1e-3, seed=rep)
-            emit(f, exp="S5", kind=kind, rep=rep,
-                 res=score(estimators(np.where(Mt, np.nan, Xt), *fit), Xt))
 
 
 def s6(f, reps=10, D=10, C=2, ntest=200):

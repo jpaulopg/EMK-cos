@@ -9,11 +9,6 @@ def b(vals, fmt, lower=True):
     return [f"\\textbf{{{x}}}" if k == best else x for x, k in zip(s, key)]
 
 out = {}
-# SNR figure
-S = json.load(open("res_snr.json")); lv = ["4.0", "2.0", "1.0", "0.5", "0.25", "0.1"]
-for m, k in (("EMK", "EMK-cos"), ("PLUG", "Plug-in (CMI)"), ("PN", "PN-Taylor"), ("RATIO", "RatioMeans")):
-    out["snr_" + m] = "".join(f"({i+1},{np.mean(S[l][k]):.3g})" for i, l in enumerate(lv))
-
 # regime map: worst case (max over SNR, rho and spread) of the excess risk relative to the Bayes risk, in %
 R = json.load(open("res_regime.json")); rows = []
 pc = lambda x, k: 100 * x[k]["rel_excess"] if k in x else None
@@ -45,11 +40,6 @@ for rho in (1, 3, 10):
         real = b([a("EMK-cos"), a("RatioMeans"), a("RatioComp"), a("PN-Taylor")], "{:.3f}")
         rows.append(f"{rho} & {int(rate*100)}\\% & {a('ref_EMK-cos'):.4f} & " + " & ".join(ref) + " & " + " & ".join(real) + r" \\")
 out["s6"] = "\n".join(rows)
-# s5 kept from the earlier run
-G5 = collections.defaultdict(list)
-for l in (json.loads(l) for l in open("res_synth_s5_s6.jsonl")): G5[(l["exp"], l.get("kind"))].append(l["res"])
-out["s5"] = {k: {m: round(np.mean([x[m] for x in v]), 4) for m in ("EMK-cos", "RatioMeans", "PN-Taylor", "CMI")} for (e, k), v in G5.items() if e == "S5"}
-
 # VAE
 V = [json.loads(l)["res"] for l in open("res_vae.jsonl")]; rows = []
 M4 = ("EMK-cos", "RatioMeans", "PN-Taylor", "Plug-in")
@@ -59,15 +49,6 @@ for t, lab in (("tau0.25", "0.25"), ("tau1.0", "1"), ("tau4.0", "4"), ("tau16.0"
     real = [f"{np.mean([v[t][m]['rmse_real'] for v in V]):.4f}" for m in M4]
     rows.append(f"{lab} ({snr:.2f}) & " + " & ".join(ref) + " & " + " & ".join(real) + r" \\")
 out["vae"] = "\n".join(rows)
-
-# thresholds
-T = [json.loads(open(f"res_thr_{s}.jsonl").read())["res"] for s in range(3)]; rows = []
-for t, lab in (("tau0.25", "0.25"), ("tau1.0", "1"), ("tau4.0", "4"), ("tau16.0", "16")):
-    far = [np.mean([x[t][m]["far_at_exact_th"] for x in T]) * 100 for m in M4]
-    dis = [np.mean([x[t][m]["dis_at_exact_th"] for x in T]) * 100 for m in M4]
-    auc = [np.mean([x[t][m]["auc"] for x in T]) for m in M4]
-    rows.append(f"{lab} & " + " & ".join(f"{f:.2f}" for f in far) + " & " + " & ".join(f"{d:.2f}" for d in dis) + " & " + " & ".join(f"{a:.3f}" for a in auc) + r" \\")
-out["thr"] = "\n".join(rows)
 
 # Bayesian
 rows = []
@@ -84,7 +65,7 @@ out["bayes"] = "\n".join(rows)
 rows = []
 for fn, lab in (("res_prior_iid.jsonl", "Independent, $\\N(0,1.25\\,I)$"), ("res_prior.jsonl", "Four families")):
     Rp = [json.loads(l)["res"] for l in open(fn)]
-    for i, (tau, tl) in enumerate(((0.3125, "0.31"), (1.25, "1.25"), (4.0, "4"), (20.0, "20"))):
+    for i, (tau, tl) in enumerate(((1.25, "1.25"), (4.0, "4"))):
         k = f"nk15_tau{tau}"; vals = b([np.mean([r[k][m] for r in Rp]) for m in M4], "{:.4f}")
         rows.append(f"{lab if i == 0 else ''} & {tl} & " + " & ".join(vals) + r" \\")
     rows.append(r"\midrule")
@@ -123,7 +104,7 @@ out["real_red"] = {m: round(100 * (1 - E / np.array(cols[m])).mean(), 1) for m i
 
 # PSD counts
 P = [json.loads(open(f"res_psd_{s}.jsonl").read())["res"] for s in range(3)]
-MP = ("EMK-cos", "RatioMeans", "PN-Taylor", "Plug-in", "MC-vec100", "Taylor2", "MC-pair10", "MC-pair100")
+MP = ("EMK-cos", "RatioMeans", "PN-Taylor", "Plug-in", "MC-vec100", "MC-pair10", "MC-pair100")
 rows = []
 for app, lab in (("vae", "VAE ($n=300$)"), ("gp", "GP curves ($n=150$)"), ("blr", "Regression weights ($n=150$)")):
     c = [sum(case[m]["mineig"] < -1e-8 for p in P for case in p[app].values()) for m in MP]
