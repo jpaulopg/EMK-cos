@@ -1,0 +1,9 @@
+{"data": "vehicle", "rate": 0.3, "rep": 0, "res": {"ObsSubset": 0.07509858447045012, "ObsSubset+PSD": 0.05795970234798846, "mineig_corrected": -0.007691060458666621}}
+{"data": "vehicle", "rate": 0.3, "rep": 1, "res": {"ObsSubset": 0.08466321988206878, "ObsSubset+PSD": 0.06645874953666156, "mineig_corrected": -0.01309879378472003}}
+{"data": "vehicle", "rate": 0.3, "rep": 2, "res": {"ObsSubset": 0.08079187095990956, "ObsSubset+PSD": 0.06324929717422136, "mineig_corrected": -0.010726513992875348}}
+{"data": "vehicle", "rate": 0.5, "rep": 0, "res": {"ObsSubset": 0.13066242793265712, "ObsSubset+PSD": 0.07928806902863228, "mineig_corrected": -0.008872780630062332}}
+{"data": "vehicle", "rate": 0.5, "rep": 1, "res": {"ObsSubset": 0.14578026296171492, "ObsSubset+PSD": 0.08891446413702117, "mineig_corrected": -0.008414113214522331}}
+{"data": "vehicle", "rate": 0.5, "rep": 2, "res": {"ObsSubset": 0.1432059488906478, "ObsSubset+PSD": 0.09001992797814395, "mineig_corrected": -0.011423290629878576}}
+{"data": "vehicle", "rate": 0.7, "rep": 0, "res": {"ObsSubset": 0.41696787077363284, "ObsSubset+PSD": 0.24420660181677312, "mineig_corrected": -0.016978709587857282}}
+{"data": "vehicle", "rate": 0.7, "rep": 1, "res": {"ObsSubset": 0.4094611269537379, "ObsSubset+PSD": 0.23222224990078974, "mineig_corrected": -0.017787821774634335}}
+{"data": "vehicle", "rate": 0.7, "rep": 2, "res": {"ObsSubset": 0.41254990816378745, "ObsSubset+PSD": 0.2557337961185798, "mineig_corrected": -0.015663139674701863}}

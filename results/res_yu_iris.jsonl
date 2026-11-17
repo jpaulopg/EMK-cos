@@ -1,0 +1,9 @@
+{"data": "iris", "rate": 0.3, "rep": 0, "res": {"ObsSubset": 0.2669605083067782, "ObsSubset+PSD": 0.1927180659306682, "mineig_corrected": -0.0007206134295194194}}
+{"data": "iris", "rate": 0.3, "rep": 1, "res": {"ObsSubset": 0.3094947132647402, "ObsSubset+PSD": 0.2235537267290223, "mineig_corrected": -0.0012215601431549638}}
+{"data": "iris", "rate": 0.3, "rep": 2, "res": {"ObsSubset": 0.274270022578882, "ObsSubset+PSD": 0.17545837308159817, "mineig_corrected": -0.0011101148541779963}}
+{"data": "iris", "rate": 0.5, "rep": 0, "res": {"ObsSubset": 0.49873166250961154, "ObsSubset+PSD": 0.4136580149640168, "mineig_corrected": -0.0006915229221167499}}
+{"data": "iris", "rate": 0.5, "rep": 1, "res": {"ObsSubset": 0.5146195819363341, "ObsSubset+PSD": 0.4297035733544418, "mineig_corrected": -0.0011135361312040277}}
+{"data": "iris", "rate": 0.5, "rep": 2, "res": {"ObsSubset": 0.4953129029635531, "ObsSubset+PSD": 0.40895600865234233, "mineig_corrected": -0.0008751824608872152}}
+{"data": "iris", "rate": 0.7, "rep": 0, "res": {"ObsSubset": 0.7059183440409216, "ObsSubset+PSD": 0.6648128090269287, "mineig_corrected": -0.00019701128939176733}}
+{"data": "iris", "rate": 0.7, "rep": 1, "res": {"ObsSubset": 0.6958751655225137, "ObsSubset+PSD": 0.6562702562761055, "mineig_corrected": -0.00017932386183955914}}
+{"data": "iris", "rate": 0.7, "rep": 2, "res": {"ObsSubset": 0.7161712432575418, "ObsSubset+PSD": 0.6856645547174487, "mineig_corrected": -8.39188177423562e-05}}

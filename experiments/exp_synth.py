@@ -1,6 +1,7 @@
 import sys, json, time
 import numpy as np
 import emk_cos as E
+import baselines as B
 
 
 def gen_params(D, C, rng, norms, k=3):
@@ -48,9 +49,11 @@ def estimators(Xm, pi, mus, covs):
     Nu = np.array([E.nu_mixture(r, m, S) for r, m, S in cond])
     Nt = np.array([sum(r[c] * (E.nu_taylor2(m[c], S[c]) if m[c] @ m[c] > 1e-12 else np.zeros(D)) for c in range(C))
                    for r, m, S in cond])
+    Np = np.array([sum(r[c] * (B.nu_pn2025(m[c], S[c]) if m[c] @ m[c] > 1e-12 else np.zeros(D)) for c in range(C))
+                   for r, m, S in cond])
     Mean = np.array([(r[:, None] * m).sum(0) for r, m, S in cond])
     Tr = np.array([sum(r[c] * (m[c] @ m[c] + np.trace(S[c])) for c in range(C)) for r, m, S in cond])
-    K = {"EMK-cos": Nu @ Nu.T, "Taylor2": Nt @ Nt.T, "CMI": cosm(Mean),
+    K = {"EMK-cos": Nu @ Nu.T, "Taylor2": Nt @ Nt.T, "PN-Taylor": Np @ Np.T, "CMI": cosm(Mean),
          "RatioMeans": (Mean @ Mean.T) / np.sqrt(np.outer(Tr, Tr))}
     return K
 
@@ -159,8 +162,16 @@ def s6(f, reps=10, D=10, C=2, ntest=200):
                 pi, mus, covs = gen_params(D, C, rng, [6.0, 6.0 / rho])
                 covs = covs * 0.1
                 Xt = sample(pi, mus, covs, ntest, rng); Mt = mcar(ntest, D, rate, rng)
-                Ko = estimators(np.where(Mt, np.nan, Xt), pi, mus, covs)
-                emit(f, exp="S6", rho=rho, rate=rate, rep=rep, res=score(Ko, Xt, Ko["EMK-cos"]))
+                Xm = np.where(Mt, np.nan, Xt)
+                Ko = estimators(Xm, pi, mus, covs)
+                # Monte Carlo reference for the expected cosine (independent of the quadrature)
+                mrng = np.random.default_rng(9000 + rep)
+                Nmc = []
+                for i in range(ntest):
+                    r, ms, Ss = E.conditional_mixture(Xm[i], pi, mus, covs)
+                    Z = E.sample_mixture(r, ms, Ss, 20000, mrng); Nmc.append((Z / np.linalg.norm(Z, axis=1, keepdims=True)).mean(0))
+                Nmc = np.array(Nmc)
+                emit(f, exp="S6", rho=rho, rate=rate, rep=rep, res=score(Ko, Xt, Nmc @ Nmc.T))
 
 
 if __name__ == "__main__":

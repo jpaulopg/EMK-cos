@@ -1,0 +1,9 @@
+{"data": "bc", "rate": 0.3, "rep": 0, "res": {"ObsSubset": 0.04246445841012147, "ObsSubset+PSD": 0.03192745979309795, "mineig_corrected": -0.000741971007448337}}
+{"data": "bc", "rate": 0.3, "rep": 1, "res": {"ObsSubset": 0.04393512958697399, "ObsSubset+PSD": 0.03266638283407441, "mineig_corrected": -0.0004167091179177386}}
+{"data": "bc", "rate": 0.3, "rep": 2, "res": {"ObsSubset": 0.04347031233976816, "ObsSubset+PSD": 0.03251676436686986, "mineig_corrected": -0.0007446623416896678}}
+{"data": "bc", "rate": 0.5, "rep": 0, "res": {"ObsSubset": 0.0780876310420432, "ObsSubset+PSD": 0.05004633803091533, "mineig_corrected": -0.000702065720993091}}
+{"data": "bc", "rate": 0.5, "rep": 1, "res": {"ObsSubset": 0.0772412549896935, "ObsSubset+PSD": 0.04729783219749803, "mineig_corrected": -0.0019382759006285406}}
+{"data": "bc", "rate": 0.5, "rep": 2, "res": {"ObsSubset": 0.07746415080771904, "ObsSubset+PSD": 0.047582334573729346, "mineig_corrected": -0.0006671674067011114}}
+{"data": "bc", "rate": 0.7, "rep": 0, "res": {"ObsSubset": 0.25604733006202623, "ObsSubset+PSD": 0.09824626026579503, "mineig_corrected": -0.004005689472671771}}
+{"data": "bc", "rate": 0.7, "rep": 1, "res": {"ObsSubset": 0.2527842690102653, "ObsSubset+PSD": 0.10116239365052257, "mineig_corrected": -0.0036820069358745443}}
+{"data": "bc", "rate": 0.7, "rep": 2, "res": {"ObsSubset": 0.2605067856958699, "ObsSubset+PSD": 0.11203414422064929, "mineig_corrected": -0.002043479967846636}}

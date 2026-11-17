@@ -2,6 +2,7 @@
 import sys, json, time
 import numpy as np
 import emk_cos as E
+import baselines as B
 from sklearn.datasets import load_diabetes
 from sklearn.metrics import roc_auc_score
 
@@ -17,12 +18,13 @@ def evaluate(M, S, W, lab, rng, N=100000, th=0.5):
     n = len(M); iu = np.triu_indices(n, 1); same = (lab[:, None] == lab[None, :])[iu]
     Nu = np.array([E.nu_gauss(M[i], S[i]) for i in range(n)])
     Nt = np.array([E.nu_taylor2(M[i], S[i]) for i in range(n)])
+    Np = np.array([B.nu_pn2025(M[i], S[i]) for i in range(n)])
     Nr = np.array([mc_nu_full(M[i], S[i], N, rng) for i in range(n)])
     Kref = Nr @ Nr.T
     tr = (M**2).sum(1) + np.array([np.trace(s) for s in S])
     mn = M / np.linalg.norm(M, axis=1, keepdims=True)
     Wn = W / np.linalg.norm(W, axis=1, keepdims=True); Ktrue = Wn @ Wn.T
-    Ks = {"EMK-cos": Nu @ Nu.T, "RatioMeans": (M @ M.T) / np.sqrt(np.outer(tr, tr)), "Taylor2": Nt @ Nt.T, "Plug-in": mn @ mn.T}
+    Ks = {"EMK-cos": Nu @ Nu.T, "RatioMeans": (M @ M.T) / np.sqrt(np.outer(tr, tr)), "Taylor2": Nt @ Nt.T, "PN-Taylor": Np @ Np.T, "Plug-in": mn @ mn.T}
     th_far = np.quantile(Kref[iu][~same], 0.95)
     out = {"_snr": float(np.mean(np.linalg.norm(M, axis=1) / np.sqrt([np.trace(s) for s in S]))), "_th_far": float(th_far)}
     for k, K in Ks.items():

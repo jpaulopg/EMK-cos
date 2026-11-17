@@ -1,6 +1,7 @@
 import sys, json, time
 import numpy as np
 import emk_cos as E
+import baselines as B
 from sklearn.datasets import load_digits
 from sklearn.metrics import roc_auc_score
 from vae_np import train_vae, encode
@@ -20,12 +21,13 @@ def run(seed, ntest=500, N=100000):
         V = v0 * tau
         Nu = np.array([E.nu_gauss(m[i], np.diag(V[i])) for i in range(ntest)])
         Nt = np.array([E.nu_taylor2(m[i], np.diag(V[i])) for i in range(ntest)])
+        Np = np.array([B.nu_pn2025(m[i], np.diag(V[i])) for i in range(ntest)])
         Nr = np.array([mc_nu(m[i], V[i], N, rng) for i in range(ntest)])
         Kref = (Nr @ Nr.T)[iu]
         tr = (m**2).sum(1) + V.sum(1)
         mn = m / np.linalg.norm(m, axis=1, keepdims=True)
         Ks = {"EMK-cos": (Nu @ Nu.T)[iu], "RatioMeans": ((m @ m.T) / np.sqrt(np.outer(tr, tr)))[iu],
-              "Taylor2": (Nt @ Nt.T)[iu], "Plug-in": (mn @ mn.T)[iu]}
+              "Taylor2": (Nt @ Nt.T)[iu], "PN-Taylor": (Np @ Np.T)[iu], "Plug-in": (mn @ mn.T)[iu]}
         # threshold calibrated on the exact expected kernel: FAR = 5% on different-class pairs
         th_far = np.quantile(Kref[~same], 0.95)
         r = {"_th_far": float(th_far), "_auc_ref": float(roc_auc_score(same, Kref))}

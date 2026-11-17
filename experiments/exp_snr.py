@@ -2,6 +2,7 @@
 import json
 import numpy as np
 import emk_cos as E
+import baselines as B
 
 rng = np.random.default_rng(7)
 D = 10
@@ -9,7 +10,7 @@ NS = 300_000
 levels = [4.0, 2.0, 1.0, 0.5, 0.25, 0.1]  # SNR = ||m||/sqrt(trS)
 res = {}
 for snr in levels:
-    errs = {"EMK-cos": [], "Plug-in (CMI)": [], "Taylor2": [], "RatioMeans": []}
+    errs = {"EMK-cos": [], "Plug-in (CMI)": [], "Taylor2": [], "PN-Taylor": [], "RatioMeans": []}
     for rep in range(30):
         ests = []
         data = []
@@ -28,6 +29,7 @@ for snr in levels:
         e["EMK-cos"] = E.nu_gauss(m1, S1) @ E.nu_gauss(m2, S2)
         e["Plug-in (CMI)"] = m1 @ m2 / (np.linalg.norm(m1) * np.linalg.norm(m2))
         e["Taylor2"] = E.nu_taylor2(m1, S1) @ E.nu_taylor2(m2, S2)
+        e["PN-Taylor"] = B.nu_pn2025(m1, S1) @ B.nu_pn2025(m2, S2)
         e["RatioMeans"] = m1 @ m2 / np.sqrt((m1 @ m1 + np.trace(S1)) * (m2 @ m2 + np.trace(S2)))
         for k in errs:
             errs[k].append(abs(e[k] - ref))

@@ -1,0 +1,9 @@
+{"data": "digits8", "rate": 0.3, "rep": 0, "res": {"ObsSubset": 0.07344056172405398, "ObsSubset+PSD": 0.05968425069246912, "mineig_corrected": -0.00020995481807950837}}
+{"data": "digits8", "rate": 0.3, "rep": 1, "res": {"ObsSubset": 0.07416117607279936, "ObsSubset+PSD": 0.05997270472973995, "mineig_corrected": -0.00013037969892469825}}
+{"data": "digits8", "rate": 0.3, "rep": 2, "res": {"ObsSubset": 0.07498827242640783, "ObsSubset+PSD": 0.06103515526707625, "mineig_corrected": -0.00020233058477481114}}
+{"data": "digits8", "rate": 0.5, "rep": 0, "res": {"ObsSubset": 0.13450214878643593, "ObsSubset+PSD": 0.09033151753128812, "mineig_corrected": -0.0003169624222058552}}
+{"data": "digits8", "rate": 0.5, "rep": 1, "res": {"ObsSubset": 0.1338244786529327, "ObsSubset+PSD": 0.0884283238688198, "mineig_corrected": -0.000408673288982047}}
+{"data": "digits8", "rate": 0.5, "rep": 2, "res": {"ObsSubset": 0.1373814720862217, "ObsSubset+PSD": 0.09205578502617154, "mineig_corrected": -0.0007412810156030319}}
+{"data": "digits8", "rate": 0.7, "rep": 0, "res": {"ObsSubset": 0.30614137141745384, "ObsSubset+PSD": 0.15438448670156263, "mineig_corrected": -0.002277750969587249}}
+{"data": "digits8", "rate": 0.7, "rep": 1, "res": {"ObsSubset": 0.29147730204756955, "ObsSubset+PSD": 0.1370834182921532, "mineig_corrected": -0.005646335228434149}}
+{"data": "digits8", "rate": 0.7, "rep": 2, "res": {"ObsSubset": 0.2978047555517222, "ObsSubset+PSD": 0.14190642507391005, "mineig_corrected": -0.0024209950919347432}}

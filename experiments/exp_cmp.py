@@ -1,6 +1,7 @@
 import sys, json, time
 import numpy as np
 import emk_cos as E
+import baselines as B
 from em_struct import em_struct
 from exp_real2 import load, cosm, knn_acc, recall, spec_ari
 from exp_knn import pair_d2, knn_impute
@@ -34,6 +35,7 @@ def run(name, rate, rep, n, sel):
         cond = [E.conditional_mixture(Xm[i], pi, mus, covs) for i in range(n)]
     Nu = np.array([E.nu_mixture(r, m, S) for r, m, S in cond])
     Nt = np.array([sum(r[c] * (E.nu_taylor2(m[c], S[c]) if m[c] @ m[c] > 1e-12 else np.zeros(D)) for c in range(len(r))) for r, m, S in cond])
+    Np = np.array([sum(r[c] * (B.nu_pn2025(m[c], S[c]) if m[c] @ m[c] > 1e-12 else np.zeros(D)) for c in range(len(r))) for r, m, S in cond])
     Mean = np.array([(r[:, None] * m).sum(0) for r, m, S in cond])
     Tr = np.array([sum(r[c] * (m[c] @ m[c] + np.trace(S[c])) for c in range(len(r))) for r, m, S in cond])
     dvec = 1 - (Nu ** 2).sum(1); Xmean = np.where(mask, np.nanmean(Xm, 0), Xm)
@@ -42,7 +44,7 @@ def run(name, rate, rep, n, sel):
         Kobs = (Xo @ Xo.T) / np.sqrt(((Xo ** 2) @ O.T) * ((Xo ** 2) @ O.T).T)
     Kobs[~np.isfinite(Kobs)] = 0.0
     nr = np.linalg.norm(Nu, axis=1, keepdims=True); N1 = Nu / np.maximum(nr, 1e-12)
-    K = {"EMK-cos": Nu @ Nu.T + np.diag(dvec), "EMK-cos g1": N1 @ N1.T, "Taylor2": Nt @ Nt.T, "Plug-in": cosm(Mean), "MeanImp": cosm(Xmean),
+    K = {"EMK-cos": Nu @ Nu.T + np.diag(dvec), "EMK-cos g1": N1 @ N1.T, "Taylor2": Nt @ Nt.T, "PN-Taylor": Np @ Np.T, "Plug-in": cosm(Mean), "MeanImp": cosm(Xmean),
          "RatioMeans": (Mean @ Mean.T) / np.sqrt(np.outer(Tr, Tr)), "ObsSubset": Kobs}
     Kt = cosm(X); iu = np.triu_indices(n, 1); res = {"_sel": sel}
     for k_, M in K.items():

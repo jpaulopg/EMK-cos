@@ -1,0 +1,9 @@
+{"data": "wine", "rate": 0.3, "rep": 0, "res": {"ObsSubset": 0.07714153399810748, "ObsSubset+PSD": 0.057647172135049184, "mineig_corrected": -8.344732073570448e-05}}
+{"data": "wine", "rate": 0.3, "rep": 1, "res": {"ObsSubset": 0.08259024701697411, "ObsSubset+PSD": 0.059354419224537394, "mineig_corrected": -0.00021592802549922046}}
+{"data": "wine", "rate": 0.3, "rep": 2, "res": {"ObsSubset": 0.07831511882409367, "ObsSubset+PSD": 0.05996273165133773, "mineig_corrected": -5.218216568449676e-05}}
+{"data": "wine", "rate": 0.5, "rep": 0, "res": {"ObsSubset": 0.1804428112871664, "ObsSubset+PSD": 0.08828613695135465, "mineig_corrected": -0.00015549147058612953}}
+{"data": "wine", "rate": 0.5, "rep": 1, "res": {"ObsSubset": 0.1789145770345635, "ObsSubset+PSD": 0.08698323840825564, "mineig_corrected": -0.00014150449730384224}}
+{"data": "wine", "rate": 0.5, "rep": 2, "res": {"ObsSubset": 0.17426204349972246, "ObsSubset+PSD": 0.08421639272934903, "mineig_corrected": -6.875071638931304e-05}}
+{"data": "wine", "rate": 0.7, "rep": 0, "res": {"ObsSubset": 0.49213284193363255, "ObsSubset+PSD": 0.34290312954281127, "mineig_corrected": -0.0006696749873507325}}
+{"data": "wine", "rate": 0.7, "rep": 1, "res": {"ObsSubset": 0.48157404234334705, "ObsSubset+PSD": 0.33046717215205273, "mineig_corrected": -0.0008428535289443877}}
+{"data": "wine", "rate": 0.7, "rep": 2, "res": {"ObsSubset": 0.4936068691967142, "ObsSubset+PSD": 0.3449764802359007, "mineig_corrected": -0.0005241086564532145}}

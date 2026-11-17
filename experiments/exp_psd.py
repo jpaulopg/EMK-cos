@@ -3,6 +3,7 @@ Adds pairwise Monte Carlo (independent draws per pair, S samples) and per-vector
 import sys, json, time
 import numpy as np
 import emk_cos as E
+import baselines as B
 import exp_rv as R
 from sklearn.datasets import load_digits
 from vae_np import train_vae, encode
@@ -19,8 +20,9 @@ def psd_eval(M, S, rng, Ss=(10, 100)):
     draw = lambda i, k: M[i] + rng.normal(size=(k, D)) @ A[i].T
     Nu = np.array([E.nu_gauss(M[i], S[i]) for i in range(n)])
     Nt = np.array([E.nu_taylor2(M[i], S[i]) for i in range(n)])
+    Np = np.array([B.nu_pn2025(M[i], S[i]) for i in range(n)])
     tr = (M**2).sum(1) + np.array([np.trace(s) for s in S]); mn = M / np.linalg.norm(M, axis=1, keepdims=True)
-    Ks = {"EMK-cos": Nu @ Nu.T, "RatioMeans": (M @ M.T) / np.sqrt(np.outer(tr, tr)), "Taylor2": Nt @ Nt.T, "Plug-in": mn @ mn.T}
+    Ks = {"EMK-cos": Nu @ Nu.T, "RatioMeans": (M @ M.T) / np.sqrt(np.outer(tr, tr)), "Taylor2": Nt @ Nt.T, "PN-Taylor": Np @ Np.T, "Plug-in": mn @ mn.T}
     for s in Ss:
         Z = np.stack([draw(i, s) for i in range(n)]); Z /= np.linalg.norm(Z, axis=2, keepdims=True)
         Ks[f"MC-vec{s}"] = Z.mean(1) @ Z.mean(1).T

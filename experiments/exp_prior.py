@@ -4,6 +4,7 @@ Same data-generating process and random stream as exp_rv.blr_run; prior variance
 import sys, json
 import numpy as np
 import emk_cos as E
+import baselines as B
 from sklearn.datasets import load_diabetes
 
 TAUS = (0.3125, 1.25, 4.0, 20.0)
@@ -27,8 +28,9 @@ def run(seed, n=150, noise=1.0, iid=False):
             for i, (Xk, yv) in enumerate(data[nk]):
                 S[i] = np.linalg.inv(Xk.T @ Xk / noise**2 + np.eye(D) / tau2); M[i] = S[i] @ Xk.T @ yv / noise**2
             Nu = np.array([E.nu_gauss(M[i], S[i]) for i in range(n)]); Nt = np.array([E.nu_taylor2(M[i], S[i]) for i in range(n)])
+            Np = np.array([B.nu_pn2025(M[i], S[i]) for i in range(n)])
             tr = (M**2).sum(1) + np.trace(S, axis1=1, axis2=2); mn = M / np.linalg.norm(M, axis=1, keepdims=True)
-            Ks = {"EMK-cos": Nu @ Nu.T, "RatioMeans": (M @ M.T) / np.sqrt(np.outer(tr, tr)), "Taylor2": Nt @ Nt.T, "Plug-in": mn @ mn.T}
+            Ks = {"EMK-cos": Nu @ Nu.T, "RatioMeans": (M @ M.T) / np.sqrt(np.outer(tr, tr)), "Taylor2": Nt @ Nt.T, "PN-Taylor": Np @ Np.T, "Plug-in": mn @ mn.T}
             out[f"nk{nk}_tau{tau2}"] = {k: float(np.sqrt(((K[iu] - Kt[iu])**2).mean())) for k, K in Ks.items()}
     return out
 

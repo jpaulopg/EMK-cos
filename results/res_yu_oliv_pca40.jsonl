@@ -1,0 +1,9 @@
+{"data": "oliv_pca40", "rate": 0.3, "rep": 0, "res": {"ObsSubset": 0.28688361746287133, "ObsSubset+PSD": 0.2517620625745362, "mineig_corrected": -0.00015170726626598425}}
+{"data": "oliv_pca40", "rate": 0.3, "rep": 1, "res": {"ObsSubset": 0.3009832327807275, "ObsSubset+PSD": 0.26334476434473103, "mineig_corrected": -0.0001564818006070408}}
+{"data": "oliv_pca40", "rate": 0.3, "rep": 2, "res": {"ObsSubset": 0.3039621974546005, "ObsSubset+PSD": 0.26816697446318105, "mineig_corrected": -0.000173251752189921}}
+{"data": "oliv_pca40", "rate": 0.5, "rep": 0, "res": {"ObsSubset": 0.4378751785275618, "ObsSubset+PSD": 0.32737114776063836, "mineig_corrected": -0.0016638429922118266}}
+{"data": "oliv_pca40", "rate": 0.5, "rep": 1, "res": {"ObsSubset": 0.4479541078193882, "ObsSubset+PSD": 0.33500413156830766, "mineig_corrected": -0.0006142453020519199}}
+{"data": "oliv_pca40", "rate": 0.5, "rep": 2, "res": {"ObsSubset": 0.4420618153353403, "ObsSubset+PSD": 0.3282880908393123, "mineig_corrected": -0.0006708289733096317}}
+{"data": "oliv_pca40", "rate": 0.7, "rep": 0, "res": {"ObsSubset": 0.687146671115967, "ObsSubset+PSD": 0.3651813795958641, "mineig_corrected": -0.000518069763062198}}
+{"data": "oliv_pca40", "rate": 0.7, "rep": 1, "res": {"ObsSubset": 0.6790880905203915, "ObsSubset+PSD": 0.35725560087323843, "mineig_corrected": -0.00036088056309555364}}
+{"data": "oliv_pca40", "rate": 0.7, "rep": 2, "res": {"ObsSubset": 0.6860388489739822, "ObsSubset+PSD": 0.35707422482389434, "mineig_corrected": -0.0005202846488975216}}

@@ -1,6 +1,7 @@
 import sys, json, time
 import numpy as np
 import emk_cos as E
+import baselines as B
 from sklearn.datasets import load_digits
 from vae_np import train_vae, encode
 from exp_real2 import knn_acc
@@ -23,10 +24,11 @@ def run(seed, ntest=500, N=100000):
         V = v0 * tau; d = m.shape[1]
         Nu = np.array([E.nu_gauss(m[i], np.diag(V[i])) for i in range(ntest)])
         Nt = np.array([E.nu_taylor2(m[i], np.diag(V[i])) for i in range(ntest)])
+        Np = np.array([B.nu_pn2025(m[i], np.diag(V[i])) for i in range(ntest)])
         Nr = np.array([mc_nu(m[i], V[i], N, rng) for i in range(ntest)])
         Kref = Nr @ Nr.T
         tr = (m**2).sum(1) + V.sum(1)
-        Ks = {"EMK-cos": Nu @ Nu.T, "RatioMeans": (m @ m.T) / np.sqrt(np.outer(tr, tr)), "Taylor2": Nt @ Nt.T}
+        Ks = {"EMK-cos": Nu @ Nu.T, "RatioMeans": (m @ m.T) / np.sqrt(np.outer(tr, tr)), "Taylor2": Nt @ Nt.T, "PN-Taylor": Np @ Np.T}
         mn = m / np.linalg.norm(m, axis=1, keepdims=True); Ks["Plug-in"] = mn @ mn.T
         z = m + np.sqrt(V) * rng.normal(size=m.shape); zn = z / np.linalg.norm(z, axis=1, keepdims=True); Kreal = zn @ zn.T
         r = {}
