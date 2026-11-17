@@ -57,7 +57,7 @@ python ../experiments/exp_vae.py          # or rerun the experiment (overwrites 
 | --- | --- | --- | --- |
 | Table "Exactness against Monte Carlo" (Appendix B) | `checks.py` (prints) | — | — |
 | Quadrature accuracy and Table "Time per input" (Appendix B) | `quad_check.py` | (prints) | `res_quad_check.json` |
-| Figure "Error against Monte Carlo as uncertainty grows" (Appendix B) | `exp_snr.py` | (prints) | `res_snr.json` |
+| Error against Monte Carlo as uncertainty grows — auxiliary, removed from the paper | `exp_snr.py` | (prints) | `res_snr.json` |
 | Synthetic GMM, multimodal laws (Table with norms 6 and 6/ρ, Appendix B; s6). s1–s5 (estimated laws, t mixtures, MNAR) are auxiliary and not in the paper | `exp_synth.py s1,s3,s6` and `exp_synth.py s2,s4,s5` | `sum_synth.py` | `res_synth_*.jsonl` |
 | VAE posteriors (Table "Fidelity to the expected cosine under the posterior laws", Appendix B) | `exp_vae.py` | `sum_vae.py` | `res_vae.jsonl` |
 | Decision thresholds (FAR, AUC) — auxiliary, not in the paper | `exp_thr.py 0 1 2` | `sum_thr.py` | `res_thr_*.jsonl` |
@@ -71,7 +71,7 @@ python ../experiments/exp_vae.py          # or rerun the experiment (overwrites 
 | Error decomposition — auxiliary; only the fitted-law fidelity (first block) is quoted in the paper | `exp_aux.py NAME` | `sum_aux.py` | `res_aux_*.jsonl` |
 | Positive semidefiniteness (Table "Kernel matrices ...", Appendix B; the delta-expansion column is auxiliary) | `exp_psd.py SEED` (seeds 0–2) | `sum_psd.py` (also reads `res_cmp_*`) | `res_psd_*.jsonl` |
 | Regime map: excess risk for diagonal Gaussians, 2-D laws embedded in D dimensions and mixtures with three spreads, including the per-component ratio of means (Table "Excess squared-error risk") | `exp_regime.py 0` | `make_tables.py` | `res_regime.json` |
-| Uncertainty of the cosine: DSS, scale ratio of variances, SD error (Table "Mean and variance forecasts") | `exp_unc.py SEED` (seeds 0–2) | `make_tables.py` | `res_unc_*.jsonl` |
+| Uncertainty of the cosine: DSS, scale ratio of variances, SD error (Table "Mean and variance forecasts"; the MC-100 column of the results is auxiliary) | `exp_unc.py SEED` (seeds 0–2) | `make_tables.py` | `res_unc_*.jsonl` |
 | Cost of mean and variance per input and per pair (Table "Mean and variance of the cosine") | `exp_cost2.py` | (prints) | `res_cost2.json` |
 | Observed-subset cosine with nearest-correlation PSD correction (column "Observed+PSD") | `exp_yu.py NAME N` | `make_tables.py` | `res_yu_*.jsonl` |
 | Stratification by responsibility entropy (paragraph "Why the moment-based estimators tie here") | `exp_strat.py NAMES` | (prints) | `res_strat_*.jsonl` |
