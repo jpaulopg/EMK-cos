@@ -40,7 +40,7 @@ def mixture_stats(cond, D):
     return {k: np.array(v) for k, v in out.items()}
 
 
-def variance_scores(F, mask, Kt, iu, qs=(0.5, 0.9), floor=1e-6):
+def variance_scores(F, mask, Kt, iu, qs=(0.5, 0.9), floor=1e-6, scale=None):
     """External check of mean-variance forecasts of the complete-data cosine, on pairs with a missing entry:
     Dawid-Sebastiani score, ratio of mean squared error to mean predicted variance (1 = calibrated scale),
     coverage of the nominal 90% normal interval, and the Brier score of the predicted probability that the
@@ -52,6 +52,7 @@ def variance_scores(F, mask, Kt, iu, qs=(0.5, 0.9), floor=1e-6):
     for name, (Nx, Gx) in dict(EMK=(F["nu"], F["G"]), PN=(F["nu_pn"], F["G_pn"]),
                                Ratio=(F["phi"], F["Gt"]), RatioComp=(F["phi_c"], F["Gt_c"])).items():
         mu = (Nx @ Nx.T)[iu][P]; Gf = Gx.reshape(n, -1); v = ((Gf @ Gf.T)[iu][P] - mu ** 2)
+        v = v * (scale or {}).get(name, 1.0)
         vf = np.maximum(v, floor); e2 = (y - mu) ** 2; sd = np.sqrt(vf)
         out[name] = dict(dss=float(np.mean(np.log(vf) + e2 / vf)), var_ratio=float(e2.mean() / vf.mean()),
                          cover90=float(np.mean(np.abs(y - mu) <= norm.ppf(0.95) * sd)), floor_frac=float(np.mean(v < floor)),

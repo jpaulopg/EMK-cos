@@ -49,7 +49,7 @@ def evaluate(M, S, rng, nreal=20, nref=20000):
                       rmse_sd_ref=float(np.sqrt(np.mean((np.sqrt(v) - sd_ref) ** 2))),
                       neg_var=float(np.mean(var < 0)),
                       scale_ratio=float(np.sum(v) / np.sum(np.clip(var_ref, 1e-6, None))))
-    out["_mean_sd_ref"] = float(sd_ref.mean())
+    out["_mean_sd_ref"] = float(sd_ref.mean()); out["_mean_var_ref"] = float(np.clip(var_ref, 0, None).mean())
     return out
 
 def vae_cases(seed, ntest=300):
