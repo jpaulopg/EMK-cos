@@ -1,8 +1,9 @@
 """Cost of the mean AND variance of the cosine, per input and per pair.
 
 Inputs: full covariance with eigenvalues log-spaced from 1 to 1e-2 in a random basis, ||m||^2 = tr S (as in the
-cost table of nu). Per input we time the computation of (nu, G) for EMK-cos (528 nodes), PN-Taylor (first moment
-and second-moment approximation), Monte Carlo per input with S draws, and the moment ratio (which needs only m, S).
+cost table of nu). Per input we time the computation of (nu, G) for EMK-cos (one eigendecomposition shared by both
+integrals), PN-Taylor (first moment and second-moment approximation), Monte Carlo per input with a given number of
+draws (timed together with the Cholesky factorization of S), and the moment ratio (which needs only m and S).
 Per pair we time the assembly of the variance tr(G_i G_j) - (nu_i^T nu_j)^2 (or the moment-ratio variance).
 Error: RMSE over pairs of the predicted standard deviation of the cosine against a reference computed with a finer
 and wider quadrature (width 1, y in [-60, 60]), and of the predicted mean.
@@ -11,23 +12,13 @@ import json, time
 import numpy as np
 import emk_cos as E
 import baselines as B
-from exp_unc import pn_second, sqrtm
-
-YR, WR = E._grid(-60.0, 60.0, 1.0)
-
 
 def moments_ref(m, S):
-    lam, Q = E._eig(S); mt = Q.T @ m; sc = float(m @ m + lam.sum()); T = np.exp(YR) / sc
-    den = 1.0 + 2.0 * T[:, None] * lam[None, :]
-    logL = -0.5 * np.log(den).sum(1) - T * (mt**2 / den).sum(1); L = np.exp(logL)
-    nu = Q @ (((WR * np.exp(YR / 2) * L)[:, None] * (mt[None] / den)).sum(0) / np.sqrt(np.pi * sc))
-    w = WR * T * L; a = mt[None] / den
-    M = np.einsum("k,ki,kj->ij", w, a, a); M[np.diag_indices(len(m))] += (w[:, None] * lam[None] / den).sum(0)
-    return nu, Q @ M @ Q.T
+    return E.moments_gauss(m, S, width=0.5)
 
 
-def mc(m, A, n, rng):
-    D = len(m); s1 = np.zeros(D); s2 = np.zeros((D, D)); ch = 20000
+def mc(m, S, n, rng):
+    D = len(m); A = np.linalg.cholesky(S); s1 = np.zeros(D); s2 = np.zeros((D, D)); ch = 20000
     for s0 in range(0, n, ch):
         k = min(ch, n - s0); z = m + rng.normal(size=(k, D)) @ A.T; u = z / np.linalg.norm(z, axis=1, keepdims=True)
         s1 += u.sum(0); s2 += u.T @ u
@@ -51,7 +42,7 @@ if __name__ == "__main__":
         for _ in range(n):
             Q = np.linalg.qr(rng.normal(size=(D, D)))[0]; lam = np.logspace(0, -2, D); S = (Q * lam) @ Q.T
             v = rng.normal(size=D); Ms.append(v / np.linalg.norm(v) * np.sqrt(np.trace(S))); Ss.append(S)
-        M = np.array(Ms); S = np.array(Ss); A = [sqrtm(s) for s in S]
+        M = np.array(Ms); S = np.array(Ss)
         ref = [moments_ref(M[i], S[i]) for i in range(n)]
         mu_r, var_r = pair_var(np.array([a for a, _ in ref]), np.array([b for _, b in ref]))
         iu = np.triu_indices(n, 1); sd_r = np.sqrt(np.clip(var_r[iu], 0, None))
@@ -67,10 +58,10 @@ if __name__ == "__main__":
                               rmse_mean=float(np.sqrt(np.mean((mu[iu] - mu_r[iu]) ** 2))),
                               rmse_sd=float(np.sqrt(np.mean((np.sqrt(np.clip(var[iu], 0, None)) - sd_r) ** 2))))
             print(D, name, meth[name], flush=True)
-        run("EMK-cos", lambda i: (E.nu_gauss(M[i], S[i]), E.m2_gauss(M[i], S[i])))
-        run("PN-Taylor", lambda i: (B.nu_pn2025(M[i], S[i]), pn_second(M[i], S[i])))
+        run("EMK-cos", lambda i: E.moments_gauss(M[i], S[i]))
+        run("PN-Taylor", lambda i: (B.nu_pn2025(M[i], S[i]), B.pn_second(M[i], S[i])))
         for ns in (10**3, 10**4, 10**5):
-            run(f"MC-{ns}", lambda i: mc(M[i], A[i], ns, rng))
+            run(f"MC-{ns}", lambda i: mc(M[i], S[i], ns, rng))
         Tr = (M**2).sum(1) + np.trace(S, axis1=1, axis2=2)
         (Vr,), tp = timed(lambda: (B.ratio_var(M, S, Tr),), 3); mr = B.ratio_mean(M, Tr)
         meth["RatioMoments"] = dict(ms_input=0.0, us_pair=1e3 * tp / len(iu[0]),

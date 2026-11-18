@@ -10,19 +10,33 @@ import numpy as np
 
 _GLX, _GLW = np.polynomial.legendre.leggauss(12)
 
-
-def _grid(lo=-48.0, hi=40.0, width=2.0):
-    edges = np.arange(lo, hi + 1e-9, width)
-    ys, ws = [], []
-    for a, b in zip(edges[:-1], edges[1:]):
-        ys.append(0.5 * (b - a) * _GLX + 0.5 * (b + a))
-        ws.append(0.5 * (b - a) * _GLW)
-    return np.concatenate(ys), np.concatenate(ws)
+# Quadrature in y = log(t * kappa), kappa = ||m||^2 + tr S.  The window starts at LO with an analytic
+# correction for t < e^LO / kappa (there L(t) = 1 and m_t = m up to O(e^LO)).  The upper end is HI0, extended so
+# that every direction with scale lambda_k + b_k^2 (eigenvalue plus squared mean coordinate) is integrated up to
+# t * (lambda_k + b_k^2) = e^MARGIN; this matters only for directions much smaller than kappa.
+LO, HI0, WIDTH, MARGIN, HI_CAP = -30.0, 40.0, 2.0, 40.0, 120.0
+_GRIDS = {}
 
 
-Y, WY = _grid()
-EY2 = np.exp(Y / 2.0)
-EY = np.exp(Y)
+def _grid(lo=LO, hi=HI0, width=WIDTH):
+    key = (lo, hi, width)
+    if key not in _GRIDS:
+        edges = np.arange(lo, hi + 1e-9, width)
+        ys, ws = [], []
+        for a, b in zip(edges[:-1], edges[1:]):
+            ys.append(0.5 * (b - a) * _GLX + 0.5 * (b + a))
+            ws.append(0.5 * (b - a) * _GLW)
+        _GRIDS[key] = (np.concatenate(ys), np.concatenate(ws))
+    return _GRIDS[key]
+
+
+def _window(lam, b, kappa, width=WIDTH):
+    sc = lam + b * b
+    pos = sc[sc > 1e-30 * kappa]
+    hi = HI0 if len(pos) == 0 else max(HI0, np.log(kappa / pos.min()) + MARGIN)
+    hi = min(hi, HI_CAP)
+    npan = int(np.ceil((hi - LO) / width - 1e-9))
+    return _grid(LO, LO + npan * width, width)
 
 
 def _eig(S):
@@ -30,39 +44,58 @@ def _eig(S):
     return np.clip(lam, 0.0, None), Q
 
 
-def nu_gauss(m, S):
-    """E[x/||x||] for x~N(m,S)."""
-    m = np.asarray(m, float)
-    sc = float(m @ m + np.trace(S))
-    if sc <= 0:
-        return np.zeros_like(m)
-    lam, Q = _eig(S)
-    mt = Q.T @ m
-    T = EY / sc
+def _moments_eigbasis(lam, b, want_nu=True, want_G=True, width=WIDTH):
+    """nu and G in the eigenbasis of S (lam: eigenvalues, b: mean coordinates)."""
+    D = len(b)
+    kappa = float(b @ b + lam.sum())
+    if kappa <= 0:
+        return np.zeros(D), np.eye(D) / D
+    Y, W = _window(lam, b, kappa, width)
+    T = np.exp(Y) / kappa
     den = 1.0 + 2.0 * T[:, None] * lam[None, :]
-    logL = -0.5 * np.log(den).sum(1) - T * (mt ** 2 / den).sum(1)
+    logL = -0.5 * np.log(den).sum(1) - T * (b * b / den).sum(1)
     L = np.exp(logL)
-    integ = (WY * EY2 * L)[:, None] * (mt[None, :] / den)
-    return Q @ (integ.sum(0) / np.sqrt(np.pi * sc))
+    q = b[None, :] / den
+    t0 = np.exp(LO) / kappa
+    nu = G = None
+    if want_nu:
+        nu = ((W * np.exp(Y / 2.0) * L)[:, None] * q).sum(0) / np.sqrt(np.pi * kappa) + 2.0 * np.sqrt(t0 / np.pi) * b
+    if want_G:
+        w = W * T * L
+        G = (q * w[:, None]).T @ q                      # BLAS: sum_k w_k q_k q_k^T
+        G[np.diag_indices(D)] += (w[:, None] * lam[None, :] / den).sum(0)
+        G += t0 * (np.diag(lam) + np.outer(b, b))       # left tail
+    return nu, G
 
 
-def m2_gauss(m, S):
-    """E[x x^T/||x||^2] for x~N(m,S)."""
+def moments_gauss(m, S, width=WIDTH):
+    """(E[x/||x||], E[x x^T/||x||^2]) for x ~ N(m, S), S >= 0, sharing one eigendecomposition."""
     m = np.asarray(m, float)
-    D = len(m)
-    sc = float(m @ m + np.trace(S))
-    if sc <= 0:
-        return np.eye(D) / D
     lam, Q = _eig(S)
-    mt = Q.T @ m
-    T = EY / sc
-    den = 1.0 + 2.0 * T[:, None] * lam[None, :]
-    logL = -0.5 * np.log(den).sum(1) - T * (mt ** 2 / den).sum(1)
-    w = WY * EY / sc * np.exp(logL)
-    a = mt[None, :] / den
-    M = (a * w[:, None]).T @ a                      # BLAS: sum_k w_k a_k a_k^T
-    M[np.diag_indices(D)] += (w[:, None] * lam[None, :] / den).sum(0)
-    return Q @ M @ Q.T
+    nu, G = _moments_eigbasis(lam, Q.T @ m, width=width)
+    return Q @ nu, Q @ G @ Q.T
+
+
+def nu_gauss(m, S, width=WIDTH):
+    """E[x/||x||] for x ~ N(m, S)."""
+    m = np.asarray(m, float)
+    lam, Q = _eig(S)
+    nu, _ = _moments_eigbasis(lam, Q.T @ m, want_G=False, width=width)
+    return Q @ nu
+
+
+def m2_gauss(m, S, width=WIDTH):
+    """E[x x^T/||x||^2] for x ~ N(m, S)."""
+    m = np.asarray(m, float)
+    lam, Q = _eig(S)
+    _, G = _moments_eigbasis(lam, Q.T @ m, want_nu=False, width=width)
+    return Q @ G @ Q.T
+
+
+def nu_diag(m, s, width=WIDTH):
+    """E[x/||x||] for x ~ N(m, diag(s)): the eigenbasis is the coordinate basis."""
+    nu, _ = _moments_eigbasis(np.clip(np.asarray(s, float), 0.0, None), np.asarray(m, float), want_G=False, width=width)
+    return nu
 
 
 def nu_mixture(pi, ms, Ss, H=None):
@@ -73,6 +106,19 @@ def nu_mixture(pi, ms, Ss, H=None):
             m, S = H @ m, H @ S @ H.T
         out = out + p * nu_gauss(m, S)
     return out
+
+
+def moments_mixture(pi, ms, Ss, H=None):
+    """(nu, G) of a Gaussian mixture, one eigendecomposition per component."""
+    nu = G = 0.0
+    for p, m, S in zip(pi, ms, Ss):
+        if p <= 0:
+            continue
+        if H is not None:
+            m, S = H @ m, H @ S @ H.T
+        a, b = moments_gauss(m, S)
+        nu = nu + p * a; G = G + p * b
+    return nu, G
 
 
 def m2_mixture(pi, ms, Ss, H=None):

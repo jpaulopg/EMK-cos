@@ -44,29 +44,3 @@ def knn_posterior(Xm, k, mode, ridge):
                 m = np.zeros(D); m[o] = Xm[i, o]; m[u] = B[j]; acc = acc + E.nu_gauss(m, Sc)
             nus.append(acc / len(nb))
     return np.array(nus), np.array(imp)
-
-def run(name, rate, rep, n, ks):
-    X, y = load(name, n, 100 + rep); n, D = X.shape
-    rng = np.random.default_rng(1000 * rep + int(rate * 100)); mask = rng.random((n, D)) < rate
-    Xm = np.where(mask, np.nan, X); Kt = cosm(X); iu = np.triu_indices(n, 1)
-    ridge = 1e-3 * max(X.var(0).mean(), 1e-6) * 10
-    out = {}
-    for k in ks:
-        for mode in ("gauss", "mix"):
-            Nu, imp = knn_posterior(Xm, k, mode, ridge)
-            K = Nu @ Nu.T; np.fill_diagonal(K, 1.0)
-            nr = np.linalg.norm(Nu, axis=1, keepdims=True); N1 = Nu / np.maximum(nr, 1e-12); K1 = N1 @ N1.T; np.fill_diagonal(K1, 1.0)
-            out[f"{mode}{k}"] = dict(rmse=float(np.sqrt(np.mean((K[iu] - Kt[iu]) ** 2))), knn1=knn_acc(K1, y))
-            if mode == "gauss":
-                Kc = cosm(imp); out[f"imp{k}"] = dict(rmse=float(np.sqrt(np.mean((Kc[iu] - Kt[iu]) ** 2))))
-    return out
-
-if __name__ == "__main__":
-    name, n, reps = sys.argv[1], int(sys.argv[2]), int(sys.argv[3])
-    rates = [float(r) for r in sys.argv[4].split(",")]; ks = [int(k) for k in sys.argv[5].split(",")]
-    with open(f"res_knn_{name}.jsonl", "w") as f:
-        for rate in rates:
-            for rep in range(reps):
-                t = time.time(); r = run(name, rate, rep, n, ks)
-                f.write(json.dumps(dict(data=name, rate=rate, rep=rep, res=r)) + "\n"); f.flush()
-                print(name, rate, rep, round(time.time() - t, 1), flush=True)

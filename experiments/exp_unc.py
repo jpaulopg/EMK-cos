@@ -18,11 +18,7 @@ from vae_np import train_vae, encode
 def sqrtm(S):
     lam, Q = np.linalg.eigh(0.5 * (S + S.T)); return Q * np.sqrt(np.clip(lam, 0, None))
 
-def pn_second(m, S):
-    d = np.trace(S) + m @ m; N = S + np.outer(m, m); Sm = S @ m
-    vard = 2 * np.trace(S @ S) + 4 * m @ Sm
-    C = 2 * (S @ S) + 2 * (np.outer(m, Sm) + np.outer(Sm, m))
-    return N / d - C / d**2 + N * vard / d**3
+pn_second = B.pn_second
 
 def mc_moments(m, S, n, rng, A):
     z = m + rng.normal(size=(n, len(m))) @ A.T; u = z / np.linalg.norm(z, axis=1, keepdims=True)

@@ -32,6 +32,7 @@ for d in $ALL; do
   python $E/exp_select.py $d ${N[$d]} ${C[$d]} 4 0.3,0.5,0.7
   python $E/exp_select2.py $d ${N[$d]} ${C[$d]} 4 0.3,0.5,0.7
   python $E/exp_aux.py $d
+  python $E/exp_zscore.py $d   # feature-scaling check (used for the five min-max sets)
 done
 python $E/exp_mech.py $ALL
 python $E/exp_strat.py $ALL

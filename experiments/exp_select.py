@@ -5,7 +5,7 @@ import sys, json, time
 import numpy as np
 import emk_cos as E
 from em_struct import em_struct
-from exp_real2 import load, cosm, knn_acc
+from exp_real2 import masked, cosm, knn_acc, ridge_from
 
 def obs_loglik(X, pi, mus, covs):
     n, D = X.shape; M = ~np.isnan(X); C = len(pi); ll = 0.0
@@ -25,10 +25,9 @@ def npar(st, k, C, D):
     return C * (D + cov) + C - 1
 
 def run(name, rate, rep, n, C):
-    X, y = load(name, n, 100 + rep); n, D = X.shape
-    rng = np.random.default_rng(1000 * rep + int(rate * 100)); mask = rng.random((n, D)) < rate
-    Xm = np.where(mask, np.nan, X); Kt = cosm(X); iu = np.triu_indices(n, 1)
-    reg = 1e-3 * max(X.var(0).mean(), 1e-6) * 10
+    X, Xm, mask, y = masked(name, n, 100 + rep, rate, 1000 * rep + int(rate * 100)); n, D = X.shape
+    Kt = cosm(X); iu = np.triu_indices(n, 1)
+    reg = ridge_from(Xm)
     out = {}
     for st, k in [("full", 0), ("diag", 0), ("lowrank3", 3), ("lowrank8", 8)]:
         s = "lowrank" if st.startswith("lowrank") else st

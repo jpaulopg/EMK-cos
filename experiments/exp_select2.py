@@ -1,7 +1,7 @@
 import sys, json, time
 import numpy as np
 from em_struct import em_struct
-from exp_real2 import load
+from exp_real2 import masked, ridge_from
 
 def rowlog(x, idx, pi, mus, covs):
     C = len(pi); lp = np.zeros(C)
@@ -11,15 +11,13 @@ def rowlog(x, idx, pi, mus, covs):
     m = lp.max(); return m + np.log(np.exp(lp - m).sum())
 
 def run(name, rate, rep, n, C, hold=0.15):
-    X, y = load(name, n, 100 + rep); n, D = X.shape
-    rng = np.random.default_rng(1000 * rep + int(rate * 100)); mask = rng.random((n, D)) < rate
-    Xm = np.where(mask, np.nan, X)
+    X, Xm, mask, y = masked(name, n, 100 + rep, rate, 1000 * rep + int(rate * 100)); n, D = X.shape
     r2 = np.random.default_rng(777 + rep); H = (~mask) & (r2.random((n, D)) < hold)
     # keep at least 1 observed entry per row after holding out
     for i in range(n):
         if (~mask[i] & ~H[i]).sum() == 0: H[i] = False
     Xt = np.where(H, np.nan, Xm)
-    reg = 1e-3 * max(X.var(0).mean(), 1e-6) * 10
+    reg = ridge_from(Xt)
     out = {}
     for st, k in [("full", 0), ("diag", 0), ("lowrank3", 3), ("lowrank8", 8)]:
         s = "lowrank" if st.startswith("lowrank") else st

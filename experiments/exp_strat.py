@@ -7,16 +7,14 @@ import numpy as np
 import emk_cos as E
 import baselines as B
 from em_struct import em_struct
-from exp_real2 import load, cosm
+from exp_real2 import masked, cosm, ridge_from
 from exp_aux import CS, NS
 
 EDGES = (0.0, 0.1, 0.5, 1.0001)
 
 def run(name, rep, rate=0.5):
-    X, _ = load(name, NS[name], 100 + rep); n, D = X.shape; C = CS[name]
-    reg = 1e-3 * max(X.var(0).mean(), 1e-6) * 10
-    mask = np.random.default_rng(1000 * rep + int(rate * 100)).random((n, D)) < rate
-    Xm = np.where(mask, np.nan, X)
+    X, Xm, mask, _ = masked(name, NS[name], 100 + rep, rate, 1000 * rep + int(rate * 100)); n, D = X.shape; C = CS[name]
+    reg = ridge_from(Xm)
     pi, mus, covs = em_struct(Xm, C=C, iters=15, reg=reg, seed=rep, struct="full")
     cond = [E.conditional_mixture(Xm[i], pi, mus, covs) for i in range(n)]
     H = np.array([-(r[r > 0] * np.log(r[r > 0])).sum() / np.log(C) for r, _, _ in cond])

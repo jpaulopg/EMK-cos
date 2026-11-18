@@ -1,33 +1,41 @@
-"""Accuracy of the composite quadrature against an adaptive reference, and cost against Monte Carlo per input.
-Reference: scipy quad_vec on the same integrand in y = log(t s), tolerance 1e-14, plus the analytic left tail."""
+"""Accuracy of the composite quadrature (emk_cos) against an adaptive reference, and cost of the expected direction
+against Monte Carlo per input.
+Reference: scipy quad_vec on the integrand in y = log(t kappa) over a wide window, plus the analytic left tail.
+The quadrature under test uses panels of width 4, 2 and 1 (12 Gauss-Legendre nodes each) on the adaptive window."""
 import json, time
 import numpy as np
 from scipy.integrate import quad_vec
+import emk_cos as E
 
-GLX, GLW = np.polynomial.legendre.leggauss(12)
 
-def grid(width, lo=-48.0, hi=40.0):
-    e = np.arange(lo, hi + 1e-9, width); a, b = e[:-1], e[1:]
-    y = (0.5 * (b - a)[:, None] * GLX + 0.5 * (b + a)[:, None]).ravel()
-    w = (0.5 * (b - a)[:, None] * GLW).ravel(); return y, w
+def _basis(m, S):
+    lam, U = np.linalg.eigh(0.5 * (S + S.T)); lam = np.clip(lam, 0, None); b = U.T @ m
+    return lam, U, b, float(b @ b + lam.sum())
 
-def integrand(y, lam, bb, s):
-    t = np.exp(y) / s; den = 1.0 + 2.0 * t * lam
-    logL = -0.5 * np.log(den).sum(-1) - t * (bb**2 / den).sum(-1)
-    return (np.exp(y / 2.0 + logL))[..., None] * (bb / den)
 
-def nu_grid(m, S, width):
-    lam, U = np.linalg.eigh(0.5 * (S + S.T)); lam = np.clip(lam, 0, None); bb = U.T @ m; s = m @ m + lam.sum()
-    y, w = grid(width); t = np.exp(y)[:, None] / s; den = 1.0 + 2.0 * t * lam[None]
-    logL = -0.5 * np.log(den).sum(1) - t[:, 0] * (bb**2 / den).sum(1)
-    I = ((w * np.exp(y / 2.0 + logL))[:, None] * (bb[None] / den)).sum(0)
-    return U @ I / np.sqrt(np.pi * s)
+def _hi(lam, b, kappa):
+    sc = lam + b * b; pos = sc[sc > 1e-30 * kappa]
+    return max(40.0, np.log(kappa / pos.min()) + 40.0) + 50.0
+
 
 def nu_ref(m, S):
-    lam, U = np.linalg.eigh(0.5 * (S + S.T)); lam = np.clip(lam, 0, None); bb = U.T @ m; s = m @ m + lam.sum()
-    I, _ = quad_vec(lambda y: integrand(np.array([y]), lam, bb, s)[0], -70.0, 90.0, epsabs=1e-15, epsrel=1e-13, limit=20000)
-    I = I + 2.0 * np.exp(-35.0) * bb   # left tail, L ~ 1 and (I+2tS)^{-1} m ~ m for t < e^{-70}/s
-    return U @ I / np.sqrt(np.pi * s)
+    lam, U, b, k = _basis(m, S)
+    def f(y):
+        t = np.exp(y) / k; den = 1.0 + 2.0 * t * lam
+        return np.exp(y / 2.0 - 0.5 * np.log(den).sum() - t * (b * b / den).sum()) * b / den
+    I, _ = quad_vec(f, -70.0, _hi(lam, b, k), epsabs=1e-17, epsrel=1e-13, limit=20000)
+    return U @ (I / np.sqrt(np.pi * k) + 2.0 * np.sqrt(np.exp(-70.0) / k / np.pi) * b)
+
+
+def G_ref(m, S):
+    lam, U, b, k = _basis(m, S)
+    def f(y):
+        t = np.exp(y) / k; den = 1.0 + 2.0 * t * lam; L = np.exp(-0.5 * np.log(den).sum() - t * (b * b / den).sum())
+        q = b / den; return (t * L * (np.outer(q, q) + np.diag(lam / den))).ravel()
+    I, _ = quad_vec(f, -70.0, _hi(lam, b, k), epsabs=1e-19, epsrel=1e-13, limit=20000)
+    G = I.reshape(len(b), len(b)) + np.exp(-70.0) / k * (np.diag(lam) + np.outer(b, b))
+    return U @ G @ U.T
+
 
 def cases(rng):
     def rnd_m(D, snr, S): v = rng.normal(size=D); return v / np.linalg.norm(v) * snr * np.sqrt(np.trace(S))
@@ -42,29 +50,39 @@ def cases(rng):
     out.append(("full, condition 1e4, D=500", rnd_m(500, 0.5, S), S))
     S = np.eye(10) * 1e12; out.append(("isotropic, scale 1e6", rnd_m(10, 1.0, S), S))
     S = np.eye(10) * 1e-12; out.append(("isotropic, scale 1e-6", rnd_m(10, 1.0, S), S))
+    out.append(("tiny deterministic component, x=(Z, 1e-14)", np.array([0.0, 1e-14]), np.diag([1.0, 0.0])))
+    v = rng.normal(size=6); S = np.outer(v, v); out.append(("rank 1, m in range, D=6", 0.7 * v, S))
     return out
 
-def mc_vec(m, S, n, rng, A=None):
-    if A is None:
-        lam, U = np.linalg.eigh(S); A = U * np.sqrt(np.clip(lam, 0, None))
-    acc = np.zeros_like(m); ch = 10000
+
+def mc_vec(m, S, n, rng):
+    """Monte Carlo per input, including the Cholesky factorization of S (S positive definite here)."""
+    A = np.linalg.cholesky(S); acc = np.zeros_like(m); ch = 10000
     for s0 in range(0, n, ch):
         k = min(ch, n - s0); z = m + rng.normal(size=(k, len(m))) @ A.T; acc += (z / np.linalg.norm(z, axis=1, keepdims=True)).sum(0)
     return acc / n
 
+
 if __name__ == "__main__":
     rng = np.random.default_rng(0); res = {"accuracy": [], "cost": []}
     for name, m, S in cases(rng):
-        ref = nu_ref(m, S); row = {"case": name, "norm_nu": float(np.linalg.norm(ref))}
-        for width, R in ((8, 132), (4, 264), (2, 528), (1, 1056)):
-            e = nu_grid(m, S, width) - ref; row[f"abs{R}"] = float(np.abs(e).max()); row[f"rel{R}"] = float(np.linalg.norm(e) / np.linalg.norm(ref))
+        rn = nu_ref(m, S); row = {"case": name, "norm_nu": float(np.linalg.norm(rn))}
+        rG = G_ref(m, S) if len(m) <= 100 else None
+        for width in (4.0, 2.0, 1.0):
+            lam, U, b, k = _basis(m, S); R = len(E._window(lam, b, k, width)[0])
+            nu, G = E.moments_gauss(m, S, width=width)
+            row[f"nodes_w{width:g}"] = R
+            row[f"nu_rel_w{width:g}"] = float(np.linalg.norm(nu - rn) / np.linalg.norm(rn))
+            if rG is not None:
+                row[f"G_rel_w{width:g}"] = float(np.linalg.norm(G - rG) / np.linalg.norm(rG))
+                row[f"G22_rel_w{width:g}"] = float(abs(G[-1, -1] - rG[-1, -1]) / abs(rG[-1, -1]))
         res["accuracy"].append(row); print(row, flush=True)
     for D in (10, 100, 500):
         Q = np.linalg.qr(rng.normal(size=(D, D)))[0]; lam = np.logspace(0, -2, D); S = (Q * lam) @ Q.T
-        v = rng.normal(size=D); m = v / np.linalg.norm(v) * np.sqrt(np.trace(S)); ref = nu_ref(m, S)
+        v = rng.normal(size=D); m = v / np.linalg.norm(v) * np.sqrt(np.trace(S)); ref = E.nu_gauss(m, S, width=0.5)
         reps = 20 if D < 500 else 3
         t0 = time.perf_counter()
-        for _ in range(reps): nu = nu_grid(m, S, 2)
+        for _ in range(reps): nu = E.nu_gauss(m, S)
         row = {"D": D, "emk_time_ms": 1e3 * (time.perf_counter() - t0) / reps, "emk_err": float(np.abs(nu - ref).max())}
         for n in (10**3, 10**4, 10**5):
             r2 = 3 if n < 10**5 else 1; errs = []; t0 = time.perf_counter()

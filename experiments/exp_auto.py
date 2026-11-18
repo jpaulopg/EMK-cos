@@ -2,7 +2,7 @@ import sys, json, time
 import numpy as np
 import emk_cos as E
 from em_struct import em_struct
-from exp_real2 import load, cosm, knn_acc
+from exp_real2 import masked, cosm, knn_acc, ridge_from
 from exp_knn import pair_d2, knn_impute, knn_posterior
 from exp_select3 import gmm_post_mean
 
@@ -11,21 +11,20 @@ CS = [2, 4, 8]
 KS = [5, 10, 20]
 
 def run(name, rate, rep, n, hold=0.15):
-    X, y = load(name, n, 100 + rep); n, D = X.shape
-    rng = np.random.default_rng(1000 * rep + int(rate * 100)); mask = rng.random((n, D)) < rate
-    Xm = np.where(mask, np.nan, X); Kt = cosm(X); iu = np.triu_indices(n, 1)
+    X, Xm, mask, y = masked(name, n, 100 + rep, rate, 1000 * rep + int(rate * 100)); n, D = X.shape
+    Kt = cosm(X); iu = np.triu_indices(n, 1)
     r2 = np.random.default_rng(777 + rep); H = (~mask) & (r2.random((n, D)) < hold)
     for i in range(n):
         if (~mask[i] & ~H[i]).sum() == 0: H[i] = False
     Xt = np.where(mask | H, np.nan, X); rows = [i for i in range(n) if H[i].any()]
-    reg = 1e-3 * max(X.var(0).mean(), 1e-6) * 10; out = {}
+    reg_t, reg = ridge_from(Xt), ridge_from(Xm); out = {}
     def score(K, K1):
         return dict(rmse=float(np.sqrt(np.mean((K[iu] - Kt[iu]) ** 2))), knn1=knn_acc(K1, y))
     for C in CS:
         if C >= n // 10: continue
         for st, kk in STRUCTS:
             s = "lowrank" if st.startswith("lowrank") else st
-            pi, mus, covs = em_struct(Xt, C=C, iters=15, reg=reg, seed=rep, struct=s, k=kk)
+            pi, mus, covs = em_struct(Xt, C=C, iters=15, reg=reg_t, seed=rep, struct=s, k=kk)
             se = 0.0; cnt = 0
             for i in rows:
                 h = np.where(H[i])[0]; o = np.where(~mask[i] & ~H[i])[0]

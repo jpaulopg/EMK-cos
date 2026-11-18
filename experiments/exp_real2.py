@@ -10,7 +10,12 @@ import emk_cos as E
 DATA_DIR = os.environ.get("EMKCOS_DATA", os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "data"))
 
 
+MINMAX = ("iris", "wine", "bc", "digits8", "vehicle")   # representations that are min-max scaled
+
+
 def load(name, n, seed):
+    """Random subsample of n records of a representation, unscaled; columns that are constant are removed.
+    Min-max scaling, where it applies, is estimated from the observed entries only (scale_observed)."""
     rng = np.random.default_rng(seed)
     if name in ("vehicle", "glass", "concrete"):
         d = np.load(os.path.join(DATA_DIR, name + ".npz")); X, y = d["X"].astype(float), d["y"]
@@ -18,11 +23,7 @@ def load(name, n, seed):
             y = np.digitize(y, np.quantile(y, [0.25, 0.5, 0.75]))
         else:
             y = np.unique(y, return_inverse=True)[1]
-        lo, hi = X.min(0), X.max(0); keep = hi > lo
-        X = (X[:, keep] - lo[keep]) / (hi[keep] - lo[keep])
-        idx = rng.choice(len(X), min(n, len(X)), replace=False)
-        return X[idx], y[idx]
-    if name == "news50":
+    elif name == "news50":
         d = np.load(os.path.join(DATA_DIR, "news50.npz")); X, y = d["X"], d["y"]
     elif name == "oliv_pca40":
         d = np.load(os.path.join(DATA_DIR, "olivetti.npz")); X = PCA(40, random_state=0).fit_transform(d["X"].astype(float)); y = d["y"]
@@ -30,17 +31,43 @@ def load(name, n, seed):
         d = np.load(os.path.join(DATA_DIR, "olivetti.npz")); X = d["X"].astype(float).reshape(-1, 8, 8, 8, 8).mean((2, 4)).reshape(len(d["y"]), 64); y = d["y"]
     else:
         L = dict(iris=ds.load_iris, wine=ds.load_wine, bc=ds.load_breast_cancer)
-        if name == "digits8":
-            b = ds.load_digits()
-        else:
-            b = L[name]()
+        b = ds.load_digits() if name == "digits8" else L[name]()
         X, y = b.data.astype(float), b.target
-        lo, hi = X.min(0), X.max(0); keep = hi > lo
-        X = (X[:, keep] - lo[keep]) / (hi[keep] - lo[keep])
+    X = X[:, X.max(0) > X.min(0)]
     idx = rng.choice(len(X), min(n, len(X)), replace=False)
     X, y = X[idx], y[idx]
     keep = X.std(0) > 1e-9
     return X[:, keep], y
+
+
+def scale_observed(name, X, mask, rows=None):
+    """Min-max scaling of the complete matrix X with column ranges estimated from the observed entries
+    (of the given rows only, e.g. the training records); identity for the other representations."""
+    if name not in MINMAX:
+        return X
+    R = slice(None) if rows is None else rows
+    Xo = np.where(mask[R], np.nan, X[R])
+    with np.errstate(all="ignore"):
+        lo, hi = np.nanmin(Xo, 0), np.nanmax(Xo, 0)
+    ok = np.isfinite(lo) & np.isfinite(hi) & (hi > lo)
+    lo = np.where(ok, lo, 0.0); rg = np.where(ok, hi - lo, 1.0)
+    return (X - lo) / rg
+
+
+def ridge_from(Xm):
+    """EM ridge from the observed entries only: 1e-2 times the mean observed variance (floor 1e-8)."""
+    with np.errstate(all="ignore"):
+        v = np.nanvar(Xm, 0)
+    v = v[np.isfinite(v)]
+    return 1e-3 * max(float(v.mean()) if len(v) else 0.0, 1e-6) * 10
+
+
+def masked(name, n, seed, rate, mask_seed):
+    """Load, draw an MCAR mask and scale from the observed entries. Returns X (complete, scaled), Xm, mask, y."""
+    X, y = load(name, n, seed); n_, D = X.shape
+    mask = np.random.default_rng(mask_seed).random((n_, D)) < rate
+    X = scale_observed(name, X, mask)
+    return X, np.where(mask, np.nan, X), mask, y
 
 
 def cosm(V):
@@ -66,46 +93,3 @@ def spec_ari(K, y):
     A = np.clip(0.5 * (K + K.T), 0, None); np.fill_diagonal(A, 1.0)
     lab = SpectralClustering(n_clusters=len(np.unique(y)), affinity="precomputed", random_state=0, n_init=5).fit_predict(A)
     return float(adjusted_rand_score(y, lab))
-
-
-def run(name, rate, rep, n, C):
-    X, y = load(name, n, 100 + rep)
-    n, D = X.shape
-    rng = np.random.default_rng(1000 * rep + int(rate * 100))
-    mask = rng.random((n, D)) < rate
-    Xm = np.where(mask, np.nan, X)
-    pi, mus, covs = E.em_gmm_missing(Xm, C=C, iters=20, reg=1e-3 * max(X.var(0).mean(), 1e-6) * 10, seed=rep)
-    cond = [E.conditional_mixture(Xm[i], pi, mus, covs) for i in range(n)]
-    Nu = np.array([E.nu_mixture(r, m, S) for r, m, S in cond])
-    Nt = np.array([sum(r[c] * (E.nu_taylor2(m[c], S[c]) if m[c] @ m[c] > 1e-12 else np.zeros(D)) for c in range(C)) for r, m, S in cond])
-    Mean = np.array([(r[:, None] * m).sum(0) for r, m, S in cond])
-    Tr = np.array([sum(r[c] * (m[c] @ m[c] + np.trace(S[c])) for c in range(C)) for r, m, S in cond])
-    dvec = 1 - (Nu ** 2).sum(1)
-    Xmean = np.where(mask, np.nanmean(Xm, 0), Xm)
-    O = (~mask).astype(float); Xo = np.where(mask, 0.0, X)
-    with np.errstate(invalid="ignore", divide="ignore"):
-        Kobs = (Xo @ Xo.T) / np.sqrt(((Xo ** 2) @ O.T) * ((Xo ** 2) @ O.T).T)
-    Kobs[~np.isfinite(Kobs)] = 0.0
-    K = {"EMK-cos": Nu @ Nu.T + np.diag(dvec), "Taylor2": Nt @ Nt.T, "CMI": cosm(Mean), "MeanImp": cosm(Xmean),
-         "RatioMeans": (Mean @ Mean.T) / np.sqrt(np.outer(Tr, Tr)), "ObsSubset": Kobs}
-    Kt = cosm(X); iu = np.triu_indices(n, 1)
-    res = {}
-    for k, M in K.items():
-        Mx = M.copy(); np.fill_diagonal(Mx, 1.0)
-        res[k] = dict(rmse=float(np.sqrt(np.mean((Mx[iu] - Kt[iu]) ** 2))), recall10=recall(Kt, Mx),
-                      knn=knn_acc(Mx, y), ari=spec_ari(Mx, y), mineig=float(np.linalg.eigvalsh(0.5 * (Mx + Mx.T)).min()))
-    res["_complete"] = dict(knn=knn_acc(Kt, y), ari=spec_ari(Kt, y))
-    res["_pd"] = dict(dmin=float(dvec.min()), dmean=float(dvec.mean()), mineig=res["EMK-cos"]["mineig"])
-    res["_dim"] = dict(n=int(n), D=int(D))
-    return res
-
-
-if __name__ == "__main__":
-    name = sys.argv[1]; n = int(sys.argv[2]); C = int(sys.argv[3]); reps = int(sys.argv[4])
-    rates = [float(r) for r in sys.argv[5].split(",")]
-    with open(f"res_real2_{name}.jsonl", "w") as f:
-        for rate in rates:
-            for rep in range(reps):
-                t = time.time(); r = run(name, rate, rep, n, C)
-                f.write(json.dumps(dict(data=name, rate=rate, rep=rep, res=r)) + "\n"); f.flush()
-                print(name, rate, rep, round(time.time() - t, 1), flush=True)

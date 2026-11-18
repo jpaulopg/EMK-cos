@@ -5,7 +5,7 @@ import sys, json, time
 import numpy as np
 import emk_cos as E
 from em_struct import em_struct
-from exp_real2 import load, cosm
+from exp_real2 import load, cosm, scale_observed, ridge_from
 from exp_aux import CS, NS
 
 def sig(z): return 1.0 / (1.0 + np.exp(-z))
@@ -51,19 +51,20 @@ def rmse(K, Kt):
     iu = np.triu_indices(len(Kt), 1); return {k: float(np.sqrt(((v[iu] - Kt[iu]) ** 2).mean())) for k, v in K.items()}
 
 def run(name, rep, rate=0.5):
-    X, _ = load(name, NS[name], 100 + rep); n, D = X.shape; C = CS[name]
-    reg = 1e-3 * max(X.var(0).mean(), 1e-6) * 10; out = {}
+    Xr, _ = load(name, NS[name], 100 + rep); n, D = Xr.shape; C = CS[name]; out = {}
     for mech in ("mcar", "mar", "mnar"):
         rng = np.random.default_rng(1000 * rep + int(rate * 100) + {"mcar": 0, "mar": 7, "mnar": 13}[mech])
-        mask = make_mask(X, mech, rate, rng); Xm = np.where(mask, np.nan, X)
-        pi, mus, covs = em_struct(Xm, C=C, iters=15, reg=reg, seed=rep, struct="full")
+        mask = make_mask(Xr, mech, rate, rng)            # the mechanism may depend on the complete values
+        X = scale_observed(name, Xr, mask); Xm = np.where(mask, np.nan, X)
+        pi, mus, covs = em_struct(Xm, C=C, iters=15, reg=ridge_from(Xm), seed=rep, struct="full")
         cond = [E.conditional_mixture(Xm[i], pi, mus, covs) for i in range(n)]
         out[mech] = dict(rate=float(mask.mean()), rmse=rmse(kernels(Xm, cond, np.nanmean(Xm, 0)), cosm(X)))
         if mech == "mcar":
             perm = np.random.default_rng(500 + rep).permutation(n); ntr = int(0.7 * n); tr, te = perm[:ntr], perm[ntr:]
-            pi, mus, covs = em_struct(Xm[tr], C=C, iters=15, reg=reg, seed=rep, struct="full")
-            cond = [E.conditional_mixture(Xm[i], pi, mus, covs) for i in te]
-            out["mcar_ind"] = dict(rate=float(mask[te].mean()), rmse=rmse(kernels(Xm[te], cond, np.nanmean(Xm[tr], 0)), cosm(X[te])))
+            Xi = scale_observed(name, Xr, mask, rows=tr); Xmi = np.where(mask, np.nan, Xi)   # scaling from training records
+            pi, mus, covs = em_struct(Xmi[tr], C=C, iters=15, reg=ridge_from(Xmi[tr]), seed=rep, struct="full")
+            cond = [E.conditional_mixture(Xmi[i], pi, mus, covs) for i in te]
+            out["mcar_ind"] = dict(rate=float(mask[te].mean()), rmse=rmse(kernels(Xmi[te], cond, np.nanmean(Xmi[tr], 0)), cosm(Xi[te])))
     return out
 
 if __name__ == "__main__":

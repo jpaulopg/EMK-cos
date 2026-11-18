@@ -32,6 +32,16 @@ def nu_pn2025(m, S):
     return g
 
 
+def pn_second(m, S):
+    """Second-moment approximation of the projected normal, E[xx^T/||x||^2], of Herrera-Esposito & Burge (2025):
+    N/d - C/d^2 + N var(d)/d^3 with N = S + mm^T, d = E||x||^2, C = 2S^2 + 2(m (Sm)^T + (Sm) m^T)."""
+    m = np.asarray(m, float); S = np.asarray(S, float)
+    d = np.trace(S) + m @ m; N = S + np.outer(m, m); Sm = S @ m
+    vard = 2 * np.trace(S @ S) + 4 * m @ Sm
+    C = 2 * (S @ S) + 2 * (np.outer(m, Sm) + np.outer(Sm, m))
+    return N / d - C / d**2 + N * vard / d**3
+
+
 def ratio_mean(M, Tr):
     """M: n x D means, Tr: n vector of E||x||^2 = ||m||^2 + tr S."""
     return (M @ M.T) / np.sqrt(np.outer(Tr, Tr))
