@@ -71,6 +71,7 @@ python ../experiments/exp_unc.py 0        # or rerun an experiment (overwrites r
 | Prior variance and dependence between inputs (Table "Regression weights, 15 rows") | `exp_prior.py 10` and `exp_prior.py 10 iid` | `sum_prior.py`, `make_tables.py` | `res_prior*.jsonl` |
 | Multimodal conditional laws (Table with norms 6 and 6/ρ) | `exp_synth.py s6` | `make_tables.py` | `res_synth_s6.jsonl` |
 | Missingness mechanisms and inductive protocol (Table "Missingness mechanisms") | `exp_mech.py NAME ...` | `sum_mech.py` | `res_mech_*.jsonl` |
+| Fidelity under the fitted law: mean and variance against Monte Carlo (Table "Fidelity under the fitted law") | `exp_fitted.py NAMES` | (prints) | `res_fitted_*.jsonl` |
 | Recalibration of the predicted variance from held-out observed entries (paragraph "External check of the variance") | `exp_recal.py NAME N` (needs `res_auto_NAME.jsonl`) | (prints) | `res_recal_*.jsonl` |
 | VAEs with latent dimension 2 and 3 (paragraph "Latent spaces of low dimension", Table "VAEs with latent dimension") | `exp_vae_lowdim.py` | (prints) | `res_vae_lowdim.jsonl` |
 | Feature scaling: standardization from observed entries (paragraph "Feature scaling") | `exp_zscore.py NAME ...` | `make_tables.py` | `res_zscore_*.jsonl` |
